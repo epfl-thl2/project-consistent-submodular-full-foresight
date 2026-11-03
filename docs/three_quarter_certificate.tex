@@ -1,0 +1,1328 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=22mm]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage[colorlinks=true,linkcolor=blue!45!black,citecolor=blue!45!black,urlcolor=blue!45!black]{hyperref}
+
+\setlist{topsep=3pt,itemsep=2pt,parsep=0pt}
+\allowdisplaybreaks
+\numberwithin{equation}{section}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{fact}{Fact}
+\renewcommand{\thefact}{A.\arabic{fact}}
+
+\newcommand{\tq}{\tfrac34}
+\newcommand{\cE}{\mathcal E}
+\newcommand{\kcap}{\mathrm{cap}}
+
+\title{Clairvoyant certificates at three quarters}
+\author{A proof of Theorem 7}
+\date{}
+
+\begin{document}
+\maketitle
+
+\noindent
+We prove that every window instance admits a $(\frac34,m+3)$-certificate. The
+argument is the one verified in Lean, where the theorem is
+\texttt{threeQuarterCertificates}, proved in the module \texttt{WindowCertificates} of
+\nolinkurl{ConsistentSubmodular/Deterministic/Certificates/} and its imports, and
+Appendix~\ref{app:lean} lists the module behind each statement.
+Section~\ref{sec:statement} states the theorem and Section~\ref{sec:profiles}
+reduces it to a finite coverage model. Section~\ref{sec:basic} collects basic
+facts and removes an initial plateau, and
+Sections~\ref{sec:carriers}--\ref{sec:rollbacks} develop the tools: pair points and their exits, four constructors, relays to
+better carriers, and two rollbacks to a previous pair. Section~\ref{sec:selector}
+combines them. Inequalities between real numbers are collected in
+Appendix~\ref{app:facts}, each with a certificate; every identity in this note
+has also been checked by exact polynomial arithmetic.
+
+\section{The statement}\label{sec:statement}
+
+Let $f\colon2^U\to\mathbb R_{\ge0}$ be monotone and submodular. A \emph{window
+instance} with stages $0,\dots,m$ consists of $f$, a set $V\subseteq U$, a
+budget $\kappa$, arrival sets $\emptyset=R_0\subseteq R_1\subseteq\dots\subseteq
+R_m\subseteq U\setminus V$, and candidates $O_0,\dots,O_m\subseteq V$ with
+$|O_j|\le\kappa$ and $f(O\cup R_j)\le f(O_j\cup R_j)$ for all $O\subseteq V$ with
+$|O|\le\kappa$. Write $[m]=\{0,\dots,m\}$,
+$\Delta=\{p\in\mathbb R^{[m]}_{\ge0}:\sum_ip_i=1\}$ and $e_i$ for the vertices of
+$\Delta$ (written $\delta_i$ in the paper). For $p\in\Delta$ let $I(p)\subseteq[m]$
+contain each $i$ independently with probability $p_i$, and put
+\[
+H_j(p)=\mathbb E\,f\Bigl(R_j\cup\bigcup_{i\in I(p)}O_i\Bigr).
+\]
+A \emph{path} is a finite sequence of points of $\Delta$ joined by segments, its
+\emph{pieces}; it is \emph{safe for stage $j$ at level $\ell$} if $H_j\ge\ell$ at
+all of its points.
+
+\begin{definition}[Definition 3.1 of the paper]
+An \emph{$(\alpha,L)$-certificate} is a point $p\in\Delta$ with paths $\gamma^-$
+from $e_0$ to $p$ and $\gamma^+$ from $p$ to $e_m$, with at most $L$ pieces in
+total, such that $H_j(p)\ge\alpha f(O_j\cup R_j)$ for all $j$, $\gamma^-$ is safe
+for stage $0$ at level $\alpha f(O_0)$, and $\gamma^+$ is safe for stage $m$ at
+level $\alpha f(O_m\cup R_m)$.
+\end{definition}
+
+\begin{theorem}[Theorem 7]\label{thm:main}
+Every window instance with stages $0,\dots,m$ admits a
+$(\frac34,m+3)$-certificate. Its point has at most two nonzero coordinates.
+\end{theorem}
+
+The second sentence is not part of Theorem 7 of the paper; the proof gives it
+at no extra cost.
+
+Theorem~\ref{thm:main} follows from Theorem~\ref{thm:finite} and
+Proposition~\ref{prop:reduction} below.
+
+\section{Coverage profiles}\label{sec:profiles}
+
+\begin{definition}[Profiles]\label{def:profile}
+A \emph{profile} with stages $[m]$ is a finite family of \emph{atoms} $\alpha$,
+each with a \emph{pool} $j_\alpha\in[m]$, a nonempty \emph{label set}
+$L_\alpha\subseteq\{0,\dots,j_\alpha\}$ and a weight $\omega_\alpha\ge0$, such
+that $m\in L_\alpha$ whenever $j_\alpha=m$ and $\omega_\alpha>0$. For
+$i,t\in[m]$ and $p\in\Delta$ put
+\begin{gather*}
+\lambda_t=\sum_{j_\alpha<t}\omega_\alpha,\qquad
+r_i(t)=\sum_{j_\alpha\ge t,\ i\in L_\alpha}\omega_\alpha,\qquad
+g_t=r_t(t),\qquad P_t=\lambda_t+g_t,\\
+H_t(p)=\lambda_t+\sum_{j_\alpha\ge t}\omega_\alpha\Bigl(1-\prod_{i\in L_\alpha}(1-p_i)\Bigr).
+\end{gather*}
+The profile is \emph{canonical} if $g_0=1$ and $r_i(t)\le g_t$ for all $i,t$.
+\end{definition}
+
+Labels are candidates. An atom of pool $j$ is covered by its labels at stages
+$t\le j$ and by the arrivals afterwards: $\lambda_t$ is the value of the
+arrivals, $r_i(t)$ the residual value of candidate $i$, and
+$P_t=H_t(e_t)$ the benchmark.
+
+\begin{theorem}[Finite checkpoint theorem]\label{thm:finite}Every canonical profile has a point $p\in\Delta$ with at most two nonzero
+coordinates and paths $\gamma^-$ from $e_0$ to $p$ and $\gamma^+$ from $p$ to
+$e_m$, with at most $m+3$ pieces in total, such that
+\[
+H_t(p)\ge\tq P_t\ \ (t\in[m]),\qquad H_0\ge\tq\ \text{on }\gamma^-,\qquad
+H_m\ge\tq P_m\ \text{on }\gamma^+.
+\]
+\end{theorem}
+
+We call $(p,\gamma^-,\gamma^+)$ a \emph{certificate of the profile}, $\gamma^-$
+an \emph{entry} and $\gamma^+$ an \emph{exit}.
+
+\begin{proposition}\label{prop:reduction}Theorem~\ref{thm:finite} implies Theorem~\ref{thm:main}, with the same point and
+paths.
+\end{proposition}
+
+\begin{proof}
+Let $h_t(I)=f(R_t\cup\bigcup_{i\in I}O_i)$ for $I\subseteq[m]$, so that $H_t$ is
+the multilinear extension of $h_t$ and $f(O_t\cup R_t)=h_t(\{t\})$. As $f$ is
+monotone and submodular and $R_s\subseteq R_t$ for $s\le t$, each $h_t$ is
+monotone and
+\begin{equation}\label{eq:compat}
+h_s(I)\le h_t(I),\qquad h_t(J)-h_t(I)\le h_s(J)-h_s(I)\qquad(s\le t,\ I\subseteq J);
+\end{equation}
+moreover $h_t(\{i\})\le h_t(\{t\})$ by optimality of $O_t$. Put
+$\lambda_t=h_t(\emptyset)$, $r_i(t)=h_t(\{i\})-\lambda_t$ and $g_t=r_t(t)=\max_ir_i(t)$.
+By \eqref{eq:compat} each $r_i$ is nonincreasing, so $g_t\le r_t(0)\le g_0$. Let
+$\ell_{ij}=r_i(j)-r_i(j+1)$ for $j<m$ and $\ell_{im}=r_i(m)$, and let a maximum
+over the empty set be $0$, as $I(p)$ may be empty. For $i\in I$ and
+$j<m$, \eqref{eq:compat} applied to $\{i\}\subseteq I$ gives
+$[h_j(I)-\lambda_j]-[h_{j+1}(I)-\lambda_{j+1}]\ge\ell_{ij}$; summing over $j\ge t$
+and using $h_m(I)-\lambda_m\ge\max_{i\in I}r_i(m)$, we get for every
+$I\subseteq[m]$ (all terms vanish if $I=\emptyset$)
+\begin{equation}\label{eq:minorant}
+h_t(I)-\lambda_t\ \ge\ \sum_{j\ge t}\max_{i\in I}\ell_{ij}\ \ge\
+\sum_{j\ge t}\max_{i\in I}\hat\ell_{ij},\qquad \hat\ell_{ij}:=\ell_{ij}\cdot[\,i\le j\,].
+\end{equation}
+The right side is a coverage function: cut the interval
+$[0,\max_i\hat\ell_{ij})$ of pool $j$ at the points $\hat\ell_{ij}$; each piece
+$[y,y')$ becomes an atom of pool $j$ with weight $y'-y$ and labels
+$\{i:\hat\ell_{ij}\ge y'\}\subseteq\{0,\dots,j\}$. In this profile
+$\hat r_i(t)=r_i(\max\{i,t\})\le g_t$ and $\hat g_t=g_t$, and label $m$ covers
+pool $m$ since $\hat\ell_{mm}=g_m=\max_i\hat\ell_{im}$. By \eqref{eq:compat},
+$\lambda_{j+1}-\lambda_j\ge\ell_{ij}$ for all $i$, so
+$\sigma_t:=\lambda_t-\hat\lambda_t\ge\lambda_0\ge0$. Taking expectations in
+\eqref{eq:minorant}, $H_t(p)\ge\hat H_t(p)+\sigma_t$, while
+$f(O_t\cup R_t)=\hat P_t+\sigma_t$. Hence
+$H_t(p)-\tq f(O_t\cup R_t)\ge\hat H_t(p)-\tq\hat P_t$ for all $p$ and $t$, and a
+certificate of the new profile is a $(\frac34,m+3)$-certificate of the window.
+If $g_0>0$, divide all weights by $g_0$ to make the profile canonical. If
+$g_0=0$, all $\hat r_i$ vanish, $\hat H_t\equiv\hat P_t$, and $e_0$ with the
+exit $[e_0,e_m]$ is a certificate.
+\end{proof}
+
+\section{Basic facts and the initial plateau}\label{sec:basic}
+
+\begin{lemma}\label{lem:facts}In a canonical profile:
+\begin{enumerate}[label=(\alph*)]
+\item each $r_i$ is nonincreasing, $r_i(t)=g_i$ for $t\le i$, and
+$1=g_0\ge g_1\ge\dots\ge g_m\ge0$;
+\item (persistence) $\lambda_t+r_i(t)\ge\lambda_s+r_i(s)$ for $s\le t$; hence
+$1\le P_s\le P_t$;
+\item for $a\ne c$ and $x\in[0,1]$,
+$H_t((1-x)e_a+xe_c)=\lambda_t+(1-x)r_a(t)+x\,r_c(t)-x(1-x)\,o_{ac}(t)$, where
+$o_{ac}(t)=\sum_{j_\alpha\ge t,\ a,c\in L_\alpha}\omega_\alpha$ satisfies
+$o_{ac}(t)\le\min\{r_a(t),r_c(t)\}$, and $o_{ac}(t)\le r_a(c)$ if $a<c$;
+also $H_t(e_i)=\lambda_t+r_i(t)$;
+\item if $\lambda_t\ge3g_t$ (stage $t$ is \emph{inactive}), then $H_t\ge\tq P_t$
+on all of $\Delta$;
+\item if $p\in\Delta$ is supported on $\{t,\dots,m\}$, then
+$H_t(p)-\tq P_t\ge H_0(p)-\tq$.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+Atoms with label $i$ lie in pools $\ge i$; this gives (a), as
+$g_i=r_i(t)\le g_t$ for $t\le i$, and the bound $o_{ac}\le r_a(c)$. In (b), an
+atom of a pool in $[s,t)$ leaves $r_i$ and enters $\lambda$; take $i=s$ and use
+$r_s(t)\le g_t$. In (c), an atom labelled by both $a$ and $c$ is missed with
+probability $x(1-x)$. (d) holds as $H_t\ge\lambda_t$. In (e), the atoms meeting
+the support of $p$ lie in pools $\ge t$, so $H_t(p)=\lambda_t+H_0(p)$, while
+$P_t\le\lambda_t+1$.
+\end{proof}
+
+\begin{lemma}[Initial plateau]\label{lem:plateau}If Theorem~\ref{thm:finite} holds for \emph{strict} profiles, i.e.\ canonical
+profiles with $g_t<1$ for all $t\ge1$, then it holds for all canonical
+profiles.
+\end{lemma}
+
+\begin{proof}
+Let $h$ be the last stage with $g_h=1$. If $h=0$ the profile is strict. If
+$h=m$, then $H_t(e_m)=\lambda_t+1\ge P_t$ for all $t$, and the edge
+$[e_0,e_m]$ has $H_0\ge1-x(1-x)\ge\frac34$ by Lemma~\ref{lem:facts}(c), as
+$r_0(0)=r_m(0)=1$; so $e_m$ with entry $[e_0,e_m]$ is a certificate. Otherwise
+form the suffix profile with stages $h,\dots,m$: keep the atoms of pools $\ge h$,
+replace $L_\alpha$ by $L_\alpha\cap\{h,\dots,m\}$, and delete the atoms for
+which this is empty. Residuals of labels $\ge h$ are unchanged, so the suffix
+profile is strict. Let $c_t\ge0$ be $\lambda_h$ plus the weight deleted from
+pools $h,\dots,t-1$. Writing tildes for the suffix profile, every $p$ supported
+on $\{h,\dots,m\}$ satisfies
+\[
+H_t(p)=\tilde H_t(p)+c_t,\ \ P_t=\tilde P_t+c_t\ \ (t\ge h),\qquad
+H_t(p)=\lambda_t+\tilde H_h(p),\ \ P_t=\lambda_t+1\ \ (t<h).
+\]
+Hence a certificate of the suffix profile satisfies all stage inequalities, its
+exit is an exit, and its entry, preceded by the edge $[e_0,e_h]$ (safe as for
+$h=m$), is an entry. The suffix has $m-h+1$ stages, so there are at most
+$(m-h)+3+1\le m+3$ pieces.
+\end{proof}
+
+From now on the profile is strict.
+
+\section{Carriers, pair points and exits}\label{sec:carriers}
+
+\begin{definition}[Carriers]\label{def:carrier}
+A \emph{carrier} is a type $a$ with $A:=g_a\ge\frac34$. Put
+\[
+d=1-A,\qquad D=3d,\qquad B=4A-3=A-D,\qquad V_a=P_a-1,
+\]
+so $\lambda_a=V_a+d$, and for $t\ge a$ put
+\[
+\delta_t=A-g_t,\qquad w_t=g_t-r_a(t),\qquad v_t=P_t-A.
+\]
+By Lemma~\ref{lem:facts}, $\delta_t,w_t\ge0$, $\delta_t+w_t=A-r_a(t)\le A$,
+$\delta_t$ and $v_t$ are nondecreasing, and persistence of $a$ gives
+$v_t\ge\lambda_a+w_t$. The carrier has \emph{strong credit} if $V_a\ge\frac12$
+or $d\le V_a(1-V_a)$; this implies $V_a\ge d$ and $\lambda_a\ge2d$. The root
+$a=0$ has $A=1$ and $d=V_0=\lambda_0=0$, so it has strong credit.
+
+For active $t>a$ with $\delta_t+w_t>0$ let
+$\rho_t=(4w_t-v_t-D)/(\delta_t+w_t)$. The \emph{envelope} $q_a$ is the maximum
+of $0$ and these ratios, and an \emph{attainer} is an active $t>a$ with
+$\delta_t+w_t>0$ and $\rho_t=q_a$. For $q\ge q_a$ and all active $t>a$,
+\[
+K_t(q):=q(\delta_t+w_t)+v_t+D-4w_t\ \ge\ 0
+\]
+(if $\delta_t+w_t=0$ then $w_t=0$). Also $q_a<3$, since $4w_t-v_t-D\le3w_t-D$,
+and either $D>0$ or $a=0$ and $\delta_t>0$.
+
+For $0<q<3$ put $x=q/4$, $\mu=4x(1-x)=q-q^2/4\in(0,1]$, $\theta=\theta_a(q)=2A-3B/q$,
+and for $c>a$
+\[
+E_c=B-q\,\delta_c-\mu\,r_a(c),\qquad S_c=w_c-(q-1)\delta_c-D,\qquad
+p_c=(1-x)e_a+xe_c.
+\]
+A row $c$ is \emph{actual-eligible} if $E_c\ge0$ and \emph{sufficient-eligible}
+if $S_c\ge0$. Since $E_c-S_c=(1-\mu)r_a(c)\ge0$, sufficient-eligible rows are
+actual-eligible. An \emph{access path} of $a$ is a path from $e_0$ to $e_a$ with
+at most $a$ pieces that is safe for stage $0$ at level $\frac34$.
+\end{definition}
+
+\begin{lemma}[Pair rows]\label{lem:rows}Let $a$ be a carrier, $0<q<3$ with $q\ge q_a$, $c>a$ and $p=p_c$.
+\begin{enumerate}[label=(\alph*)]
+\item $H_t(p)-\tq P_t\ge\frac14E_c$ for $t\le a$, and
+$4H_t(p)-3P_t\ge E_c+K_t(q)$ for active $t\in(a,c]$. Both bounds also hold
+with $S_c$ in place of $E_c$.
+\item On the segment $[e_a,p]$, $H_0\ge\frac34+\frac14S_c$; if $q\le2$, also
+$H_0\ge\frac34+\frac14E_c$.
+\item For $t>c$, with $u=r_a(t)$ and $y=r_c(t)$, and for $\nu\in\{\mu,1\}$,
+\[
+4H_t(p)-3P_t\ \ge\ A+v_c+(4-q)u+(q-1)y-\nu\min\{u,y\}-3g_t.
+\]
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+For $t\le c$, Lemma~\ref{lem:facts}(a),(c) give $r_c(t)=g_c$ and
+$o_{ac}(t)\le r_a(c)$, so for $\nu\in\{\mu,1\}$
+\[
+4H_t(p)-3P_t\ge\lambda_t+(4-q)r_a(t)+q\,g_c-\nu\,r_a(c)-3g_t.
+\]
+For active $t\in(a,c]$, substituting $\lambda_t=v_t+\delta_t$,
+$r_a(t)=A-\delta_t-w_t$, $g_t=A-\delta_t$ and $g_c=A-\delta_c$ turns the right
+side into exactly $E_c+K_t(q)$ for $\nu=\mu$, and $S_c+K_t(q)$ for $\nu=1$. For
+$t\le a$, Lemma~\ref{lem:facts}(e) reduces to $t=0$, where $r_a(0)=A$ and
+$H_0(p)\ge A-x\delta_c-x(1-x)r_a(c)=\frac34+\frac14E_c$, and also
+$H_0(p)\ge A-x\delta_c-\frac14r_a(c)=\frac34+\frac14S_c$. For (b), these two
+bounds with $x$ replaced by $s\in[0,x]$ are nonincreasing in $s$ (the first
+because $s\le x\le\frac12$). For (c), use $o_{ac}(t)\le\min\{u,y\}$,
+$4x(1-x)=\mu\le1$ and persistence of $c$, which gives
+$\lambda_t\ge P_c-y=A+v_c-y$.
+\end{proof}
+
+Every atom of pool $m$ contains the label $m$. Hence, for each type $i<m$ and
+$y\in[0,1]$,
+\begin{equation}\label{eq:terminal-edge}
+H_m\bigl((1-y)e_i+ye_m\bigr)=\lambda_m+(1-y)^2r_i(m)+y\,g_m .
+\end{equation}
+This is convex in $y$. For $i=m$ the segment is the single point $e_m$, with
+value $P_m$. If $i<m$ and $e_i$ is safe, i.e.\ $\lambda_m+r_i(m)\ge\tq P_m$, then
+the edge $[e_i,e_m]$ is safe for stage $m$ at level $\frac34P_m$ unless its
+minimum is interior and too low. That happens only if
+\begin{equation}\label{eq:unsafe-edge}
+r_i(m)>\tfrac12g_m,\qquad r_i(m)(\lambda_m+g_m)<g_m^2,\qquad\text{hence}\quad\lambda_m<g_m.
+\end{equation}
+Persistence gives $\lambda_m+r_i(m)\ge P_i\ge g_i\ge g_m$ for every $i$.
+
+\begin{lemma}[Exits]\label{lem:exit}Let $a<c$, $x\in[0,1]$ and $p=(1-x)e_a+xe_c$ with $H_m(p)\ge\frac34P_m$.
+Suppose one of the following:
+\begin{enumerate}[label=(\alph*)]
+\item $\lambda_m+(1-x)r_a(m)+x\,r_c(m)-\frac14\min\{r_a(m),r_c(m)\}\ge\tq P_m$;
+\item $a$ is a carrier, $x=q/4$ with $q_a\le q\le2$, and $q\ge1$ or
+$\lambda_a\ge\frac32d$.
+\end{enumerate}
+Then for some $b\in\{a,c\}$ the path $p\to e_b\to e_m$ is safe for stage $m$ at
+level $\frac34P_m$.
+\end{lemma}
+
+\begin{proof}
+Write $L=\lambda_m$, $G=g_m$ and $C=\frac34(L+G)$. If $m$ is inactive, all of
+$\Delta$ is safe at stage $m$; so assume $m$ is active.
+
+(a) Let $b\in\{a,c\}$ maximize $R:=r_b(m)$, and let $w=\min\{r_a(m),r_c(m)\}$.
+Along $[p,e_b]$ the weighted average of $r_a(m)$ and $r_c(m)$ does not decrease.
+Moreover $H_m$ dominates $L+(\text{average})-w/4$ along it, since
+$\frac w4-z(1-z)o=w(z-\frac12)^2+z(1-z)(w-o)\ge0$. So $[p,e_b]$ is safe and
+$L+R-\frac w4\ge C$. If $[e_b,e_m]$ were unsafe, \eqref{eq:unsafe-edge} would
+give $L<G$; but then $w\ge G-L$ yields $R\ge\frac14(3G-L+w)\ge G-\frac L2$, and
+$(G-\frac L2)(G+L)-G^2=\frac12L(G-L)\ge0$ contradicts $R(L+G)<G^2$.
+
+(b) Let $u=r_a(m)$ and $p'=(1-x)e_a+xe_m$. Comparing atom by atom (every atom
+of pool $m$ contains $m$), $H_m(p')\ge H_m(p)$. First, the segment $[p',e_m]$ is
+safe. By \eqref{eq:terminal-edge} with $i=a<m$ it is unsafe only if the minimizer of
+$s\mapsto L+(1-s)^2u+sG$ lies in $(x,1)$ with value below $C$. That means
+$u(L+G)<G^2$ and $2u(1-x)>G$. For $q=2$ the second fails, as $u\le G$. For
+$q<2$, Fact~\ref{fact:exit} excludes both. It applies with $\lambda=\lambda_a$ (note $A+\lambda_a=P_a\ge1$),
+because persistence gives $L+u\ge A+\lambda_a$, and $K_m(q)\ge0$ reads
+$q(A-u)\ge3G-4u-L+4A-3$.
+
+Second, if $p''\in\Delta$ has $p''_i=z$, then
+$H_m(p'')\le L+G(1-z)+r_i(m)z^2$. Indeed, an atom containing $i$ is missed
+with probability at least $(1-z)(1-\sum_{j\ne i}p''_j)\ge z(1-z)$, and every
+other atom with probability at least $z$. Hence, if $e_i$ is safe but
+$[e_i,e_m]$ is not, every $p''$ with $p''_i=z_i:=G/(2r_i(m))\in(\frac12,1)$ is
+unsafe, by \eqref{eq:unsafe-edge}.
+
+Third, $H_m$ is a convex quadratic along the line through $e_a$ and $e_c$
+(Lemma~\ref{lem:facts}(c)). So one of $[p,e_a]$ and $[p,e_c]$, say $[p,e_b]$,
+is safe. If $b=m$ we are done. Suppose $[e_b,e_m]$ is unsafe. The safe segment
+$[p,e_b]$ cannot meet the slice $\{p''_b=z_b\}$, so $p_b>z_b>\frac12$. Since
+$p_c=x\le\frac12$, we have $b=a$ and $1-x>z_a$. But then the safe segment
+$[p',e_m]$, whose $a$-coordinate decreases from $1-x$ to $0$, meets the slice
+$\{p''_a=z_a\}$, a contradiction.
+\end{proof}
+
+\section{Constructors}\label{sec:constructors}
+
+\begin{lemma}[Constructors]\label{lem:constructors}
+Let $a$ be a carrier with an access path $\pi$, and let $p$ be as in one of the
+cases below (eligibility and $\theta$ refer to the stated $q$). Then
+$H_t(p)\ge\frac34P_t$ for all $t$. The path $\pi$ followed by $[e_a,p]$ is an
+entry, and $p$ has an exit of at most two pieces. These form a certificate with
+at most $a+3$ pieces.
+\begin{enumerate}
+\item[(V)] $q_a=0$, $a$ has strong credit, and $p=e_a$.
+\item[(L)] $0<q:=q_a\le1$, $a$ has strong credit, some active $c>a$ is
+actual-eligible, and $p=p_c$ for the last such $c$.
+\item[(A)] $1\le q\le2$, $q\ge q_a$, some active $c>a$ is actual-eligible,
+$p=p_c$ for the last such $c$, and $v_c\ge\theta$.
+\item[(S)] $1\le q<3$, $q\ge q_a$, some active $c>a$ is sufficient-eligible,
+$p=p_c$ for the last such $c$, and $v_c\ge\max\{2D,\theta\}$.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+Inactive stages are harmless by Lemma~\ref{lem:facts}(d). In (L), (A) and (S),
+the stages $t\le c$ and the entry follow from Lemma~\ref{lem:rows}(a),(b),
+because $E_c\ge0$ (resp.\ $S_c\ge0$), $K_t(q)\ge0$, and $q\le2$ in (L) and (A).
+Let $t>c$ be active. By maximality of $c$, $E_t<0$ (resp.\ $S_t<0$). Write
+$\delta=\delta_t$ and $w=w_t$, so that $u=A-\delta-w$ and $g_t=A-\delta$ in
+Lemma~\ref{lem:rows}(c).
+
+(A) Take $\nu=\mu$. The bound depends on $y$ through
+$(q-1)y-\mu\min\{u,y\}$, with slope $q^2/4-1\le0$ for $y<u$ and $q-1\ge0$ for
+$y>u$. At $y=u$ it equals $v_c-F$, where $F=(3-\mu)w-\mu\delta-(1-\mu)A$.
+Since $E_t<0$ reads $\mu w<\mu A-B+(q-\mu)\delta$, Fact~\ref{fact:actual}
+gives $F\le\theta\le v_c$.
+
+(L) Take $\nu=\mu$. As $q\le1$, the $y$-dependent part is nonincreasing and
+$y\le g_t$. At $y=g_t$ the bound equals $(1-\mu)A+v_c+\mu\delta-(4-q-\mu)w$.
+Multiply $\mu w<\mu A-B+(q-\mu)\delta$ by $(4-q-\mu)/\mu$ and use
+$(4-q-\mu)q=(4-q)\mu$ and $(4-q-\mu)(q-\mu)=\mu^2$. This gives
+$(4-q-\mu)w-\mu\delta<(\frac4q-1)(\mu A-B)$, so the margin exceeds
+$v_c-(3-q)A+(\frac4q-1)B$. On the other hand, $K_c(q)\ge0$ and $E_c\ge0$ give
+$v_c+D\ge(4-q)w_c-q\delta_c=\frac4q(E_c+\mu A-B)\ge\frac4q(\mu A-B)$, which is
+$v_c\ge(3-q)A-(\frac4q-1)B$.
+
+(S) Take $\nu=1$. Considering $y\ge u$ and $y\le u$ separately, the bound is at
+least $v_c+\delta-2w$ if $q\le2$, and at least $(2-q)A+v_c+(q-1)\delta-(4-q)w$
+if $q\ge2$. Here $S_t<0$ reads $w<D+(q-1)\delta$, and $w\le A-\delta$.
+\begin{itemize}
+\item For $\delta\ge B/q$, $w\le A-\delta$ bounds both subtracted quantities by
+$2A-3\delta\le\theta$.
+\item For $\delta\le B/q$, $w<D+(q-1)\delta$ bounds them by
+$2D+(2q-3)\delta$ and $(q-2)A+(4-q)D+(q-1)(3-q)\delta$. Both are linear in
+$\delta$ and equal $\theta$ at $\delta=B/q$; the first equals $2D$ at
+$\delta=0$, and the second is nondecreasing in $\delta$ as $q<3$.
+\end{itemize}
+So the margin is at least $v_c-\max\{2D,\theta\}\ge0$.
+
+(V) For active $t>a$, $4H_t(e_a)-3P_t=A+v_t-4w_t=B+K_t(0)\ge0$. For $t\le a$,
+use Lemma~\ref{lem:facts}(e) and $H_0(e_a)=A$. The entry is $\pi$ itself.
+
+\emph{Exits.} In (V) and (L) strong credit gives $\lambda_a\ge2d$, and
+Lemma~\ref{lem:exit}(b) applies; in (V) take $x=0$ and $c=m$, and if $a=m$ there
+is nothing to do. In (A), Lemma~\ref{lem:exit}(b) applies since $q\ge1$. In
+(S), the terminal row was proved through the $\nu=1$ bounds: by
+Lemma~\ref{lem:rows}(c) if $m>c$, and by Lemma~\ref{lem:rows}(a) if $m=c$, where
+$r_a(c)=\min\{r_a(m),r_c(m)\}$ because $r_c(m)=g_m$. Hence
+Lemma~\ref{lem:exit}(a) applies. The piece count is
+$|\pi|+1+2\le a+3$.
+\end{proof}
+
+\section{Relays}\label{sec:relays}
+
+For a carrier $a$ and $s>a$ let
+$J_{as}(z)=A-(A-g_s)z-r_a(s)z(1-z)-\frac34$ for $z\in[0,1]$. By
+Lemma~\ref{lem:facts}(a),(c), $H_0((1-z)e_a+ze_s)\ge\frac34+J_{as}(z)$. The edge
+$[e_a,e_s]$ is \emph{safe} if $J_{as}\ge0$ on $[0,1]$, and \emph{strictly safe}
+if $J_{as}>0$ there. A safe edge extends an access path of $a$ to one of $s$,
+and $J_{as}(1)\ge0$ means $g_s\ge\frac34$.
+
+\begin{lemma}[Credit transfer]\label{lem:transfer}If $a$ is a carrier with $A>\frac34$ and $[e_a,e_s]$ is safe, then $s$ has
+strong credit.
+\end{lemma}
+
+\begin{proof}
+Persistence gives $V_s=P_s-1\ge V_a+w_s$. If $V_s\ge\frac12$ we are done.
+Otherwise $V_a+w_s<\frac12$, and Fact~\ref{fact:transfer} (with $v=V_a$,
+$e=\delta_s$, $w=w_s$) gives
+$1-g_s=d+\delta_s\le(V_a+w_s)(1-V_a-w_s)\le V_s(1-V_s)$.
+\end{proof}
+
+\begin{lemma}[Attainers]\label{lem:attainers}
+Let $a$ be a carrier with strong credit and $q=q_a>0$, let $s$ be an attainer,
+and let $b=v_s-w_s$. Then $b\ge\lambda_a$ and $(3-q)w_s=q\delta_s+b+D$.
+Moreover:
+\begin{enumerate}[label=(\alph*)]
+\item $(3-q)S_s=b-(2-q)D+(q^2-3q+3)\delta_s$; so $s$ is sufficient-eligible if
+$q\ge\frac43$, or if $q\ge1$ and $\lambda_a\ge D$;
+\item if $1\le q\le2$ and $A\ge\frac{33}{40}$, then $s$ is actual-eligible
+(Fact~\ref{fact:elig33});
+\item if $0<q\le1$ and $A\ge\frac{1281}{1600}$, then $s$ is actual-eligible
+(Fact~\ref{fact:elig1281});
+\item if $1\le q\le\frac32$ and $\lambda_a\ge D$, then $v_s\ge\theta(q)$
+(Fact~\ref{fact:stop}).
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+The first claim is persistence and the second is $\rho_s=q$. In (a),
+$b-(2-q)D\ge0$ because $b\ge\lambda_a\ge2d=\frac23D$ in the first case, and
+$b\ge D$ in the second. In (b), Fact~\ref{fact:elig33} applies if $d>0$; if
+$d=0$, the identity for $4E$ in Appendix~\ref{app:facts} reads
+$4E_s=qv_s+(q-2)^2\ge0$.
+\end{proof}
+
+\begin{lemma}[Strict relays]\label{lem:relay}
+Let $a$ be a carrier with strong credit and $A>\frac34$, let $1\le q=q_a<3$,
+and let $s$ be an attainer with $v_s<\theta(q)$. If $\lambda_a\ge D$, or
+$q\ge\frac43$, or $A\ge\frac{33}{40}$, then $[e_a,e_s]$ is strictly safe. In
+particular $g_s>\frac34$.
+\end{lemma}
+
+\begin{proof}
+Write $\delta=\delta_s$, $w=w_s$, $b=v_s-w_s$, $r=r_a(s)=A-\delta-w$,
+$M=(A-w)(w-D)-B\delta$ and
+$\cE(\beta,\omega)=\beta^2-\beta(2A+2\omega-D)+D(A+\omega)$. Since
+$q(\delta+w)=3w-b-D$, expanding gives
+\begin{equation}\label{eq:relay}
+(\delta+w)\bigl[(2A-v_s)q-3B\bigr]=3M+\cE(b,w),
+\end{equation}
+and the left side is positive. As $J_{as}(z)=\frac B4-(\delta+r)z+rz^2$ and
+$(\delta+r)^2-Br=-M$, the condition $M>0$ forces $r>0$ and leaves $J_{as}$ with
+no real root, so the edge is strictly safe. It therefore suffices to show
+$\cE(b,w)\le0$.
+
+Here $b\ge\lambda_a$, $b<2A-w$ (as $v_s<\theta\le2A$) and $w\le A$. Also $\cE$
+is convex in $\beta$, with
+$\cE(D,w)=D(2D-A-w)\le0$ and $\cE(2A-w,w)=3(AD-2Aw+w^2)\le0$ whenever $D\le w\le A$.
+\begin{itemize}
+\item If $\lambda_a\ge D$, then $(3-q)w\ge b+D\ge2D$ gives $w\ge D$, and
+convexity on $[D,2A-w]$ gives $\cE(b,w)\le0$.
+\item Otherwise $\lambda_a<D$, so $d>0$, $V_a<2d\le\frac12$ and
+$d\le V_a(1-V_a)$. Moreover $\cE(\lambda_a,\cdot)$ is decreasing, with slope
+$D-2\lambda_a<0$.
+\begin{itemize}
+\item If $q\ge\frac32$, then $w\ge\frac{\lambda_a+D}{3-q}\ge\frac23(\lambda_a+D)>D$,
+and $\cE(\lambda_a,w)\le\cE(\lambda_a,\frac23(\lambda_a+D))<0$ by
+Fact~\ref{fact:highq}.
+\item If $A\ge\frac{33}{40}$, Fact~\ref{fact:highanchor} gives $w>D$, so
+$\cE(\lambda_a,w)<\cE(\lambda_a,D)<0$.
+\end{itemize}
+In both cases convexity on $[\lambda_a,2A-w]$ gives $\cE(b,w)\le0$.
+\end{itemize}
+The remaining case, $\lambda_a<D$, $A<\frac{33}{40}$ and
+$\frac43\le q<\frac32$, is Fact~\ref{fact:fourthirds}, which proves
+$J_{as}>0$ directly.
+\end{proof}
+
+\begin{lemma}[Inheritance]\label{lem:inherit}Let $a$ be a carrier with strong credit and $A>\frac34$, let $k=q_a\in[1,3)$,
+and let $h$ be an attainer with $g_h\ge\frac34$ and $v_h<\theta_a(k)$.
+\begin{enumerate}[label=(\alph*)]
+\item If $k<\frac43$ and $A\ge\frac{33}{40}$, then $g_h>\frac{1281}{1600}$
+(Fact~\ref{fact:smallparent}).
+\item If $\lambda_h<3(1-g_h)$, then $\frac43<k<2$ and $1-A<\frac18$
+(Fact~\ref{fact:upgrade}).
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+Both parts apply the cited facts with $e=\delta_h$, $W=w_h$ and $b=v_h-w_h$
+(Lemma~\ref{lem:attainers}). Fact~\ref{fact:smallparent} needs $A<1$, which
+holds in (a): $A=1$ would give $\theta_a(k)=2-\frac3k<0\le v_h$.
+\end{proof}
+
+\section{Rollbacks}\label{sec:rollbacks}
+
+\begin{definition}[Relayed carriers]\label{def:relayed}A \emph{relayed carrier} is a carrier $h$ with $\frac34<g_h<1$, strong credit
+and an access path, together with a \emph{parent} $a<h$ and $k:=q_a$ such that
+\begin{enumerate}[label=(H\arabic*)]
+\item $a$ is a carrier with $g_a>\frac34$, strong credit and an access path
+$\pi_a$, and $1\le k<3$;
+\item $h$ is an attainer of $a$, and $[e_a,e_h]$ is safe;
+\item the \emph{parent test failed}: $v^a_t<\theta_a(k)$ for every active
+$t>a$ that is actual-eligible (if $k\le2$), resp.\ sufficient-eligible (if
+$k>2$), for $a$ at $k$;
+\item if $k<\frac43$ then $g_a\ge\frac{33}{40}$.
+\end{enumerate}
+\end{definition}
+
+Superscripts $a$ refer to the notation of Definition~\ref{def:carrier} for $a$.
+Condition (H3) holds at every sufficient-eligible row, and in particular at $h$:
+$h$ is sufficient-eligible if $k\ge\frac43$ and actual-eligible otherwise, by
+Lemma~\ref{lem:attainers}(a),(b) and (H4). We write
+\begin{gather*}
+d_0=1-g_a,\qquad d=1-g_h,\qquad p=P_h-1,\qquad W=g_h-r_a(h),\\
+C=2-\frac3k+\frac{3(4-k)d_0}k,\qquad \hat x=\Bigl(1-\frac k4\Bigr)e_a+\frac k4e_h.
+\end{gather*}
+
+\begin{lemma}[Rows of the rollback point]\label{lem:rollrows}
+Let $h$ be a relayed carrier with $k\ge\frac43$.
+\begin{enumerate}[label=(\alph*)]
+\item $p=(4-k)W-kd-(4-k)d_0$, $p\ge W+V_a$ and $p<C$. An active $t>a$ is
+sufficient-eligible for $a$ if and only if
+$g_t-r_a(t)\ge(k-1)(1-g_t)+(4-k)d_0$, and then $P_t-1<C$.
+\item $H_t(\hat x)\ge\frac34P_t$ for $t\le h$, and $\pi_a$ followed by
+$[e_a,\hat x]$ is an entry.
+\item For active $t>h$ let $T=1-g_t$, $P'=P_t-1$, $u=g_t-r_h(t)$,
+$z=g_t-r_a(t)$ and $\kcap=(k-1)T+(4-k)d_0$. Then
+\[
+4H_t(\hat x)-3P_t\ \ge\ M:=T+P'-(4-k)z-ku+\max\{z,u\},
+\]
+the sufficient row with overlap $\min\{r_a(t),r_h(t)\}$. Moreover
+$P'\ge p+u$, $P'\ge p+z-W$ and $u\le1-T$.
+\item In (c): if $t$ is sufficient-eligible for $a$, then
+$M\ge U:=d-2C+3p-(3-k)W$. If not, then $M\ge p+(3-2k)T-2(4-k)d_0$ when $k\le2$,
+and $M\ge p-(k-2)-(k-1)(3-k)T-(4-k)^2d_0$ when $k\ge2$.
+\item If $M\ge0$ at $t=m$ whenever $m>h$ is active, then $\hat x$ has an exit
+of at most two pieces.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+(a) In child notation, $\delta^a_h=d-d_0$, $w^a_h=W$, $v^a_h=p+d_0$ and
+$D^a=3d_0$. So $\rho^a_h=k$ is the first identity. Persistence of $a$ gives
+$p+d_0\ge\lambda_a+W=V_a+d_0+W$. Next, $\theta_a(k)+g_a-1=C$, so
+$v^a_t<\theta_a(k)$ reads $P_t-1<C$, and (H3) at $h$ gives $p<C$. Finally
+$S^a_t(k)=z-(k-1)(1-g_t-d_0)-3d_0$.
+
+(b) $h$ is sufficient-eligible for $a$ (Lemma~\ref{lem:attainers}(a)). So
+Lemma~\ref{lem:rows}(a), with $c=h$, $q=k$ and $S$ in place of $E$, proves the
+rows $t\le h$. The segment $[e_a,\hat x]$ lies in the safe edge $[e_a,e_h]$.
+
+(c) Use Lemma~\ref{lem:facts}(c) with $4x(1-x)\le1$,
+$o_{ah}(t)\le\min\{r_a(t),r_h(t)\}$ and $\lambda_t=P'+T$. The three inequalities
+are persistence of $h$ and of $a$ from $h$ to $t$, and $r_h(t)\ge0$.
+
+(d) $M$ equals $M_1:=T+P'-(3-k)z-ku$ if $z\ge u$, and
+$M_2:=T+P'-(4-k)z-(k-1)u$ if $z\le u$; always $M\ge M_2$. If $t$ is eligible,
+then $P'<C$, and
+\begin{align*}
+M_1-U&=(T-d)+2(C-P')+(3-k)(P'-p-z+W)+k(P'-p-u),\\
+M_2-U&=(T-d)+2(C-P')+(3-k)W+3(P'-p-u)+(4-k)(u-z).
+\end{align*}
+If $t$ is not eligible, then $z<\kcap$. For $k\le2$,
+\[
+M_1-(T+p-2z)=(P'-p-u)+(k-1)(z-u),\qquad M_2-(T+p-2z)=(P'-p-u)+(2-k)(u-z),
+\]
+and $T+p-2z\ge T+p-2\,\kcap$. For $k\ge2$,
+\[
+M_2-\bigl[p-(k-2)-(k-1)(3-k)T-(4-k)^2d_0\bigr]=(P'-p-u)+(k-2)(1-T-u)+(4-k)(\kcap-z).
+\]
+
+(e) If $m>h$, $M$ is four times the sufficient row of Lemma~\ref{lem:exit}(a)
+minus $3P_m$. If $m=h$, the row proved in (b) is that row, since
+$r_a(h)=\min\{r_a(m),r_h(m)\}$. Apply Lemma~\ref{lem:exit}(a).
+\end{proof}
+
+\begin{lemma}[Low rollback]\label{lem:lowroll}Let $h$ be a relayed carrier with $k\ge\frac43$, $g_h<\frac{1281}{1600}$ and
+$0<q:=q_h\le1$, and suppose that no active $t>h$ is actual-eligible for $h$ at
+$q$. Then $\hat x$, with the entry of Lemma~\ref{lem:rollrows}(b) and the exit
+of Lemma~\ref{lem:rollrows}(e), is a certificate with at most $a+3$ pieces.
+\end{lemma}
+
+\begin{proof}
+Let $s$ be an attainer of $h$, and put $\delta=g_h-g_s$, $w=g_s-r_h(s)$ and
+$P=P_s-1$. In the notation of $h$, the relations $\rho_s=q$, persistence,
+$r_h(s)\ge0$ and $E^h_s<0$ read
+\[
+P=(4-q)w-q\delta-4d,\quad P\ge p+w,\quad w\le1-d-\delta,\quad
+qP\le(4-q)^2d-(q-2)^2 .
+\]
+The last uses the identity $4E^h_s=qP+(q-2)^2-(4-q)^2d$, valid at attainers.
+These relations, together with Lemma~\ref{lem:rollrows}(a), strong credit of
+$a$, $d_0\le d$ and $\frac{319}{1600}<d\le\frac14$, are the hypotheses of
+Fact~\ref{fact:low}. It yields $\frac{40}{23}<k<\frac{40}{17}$, $P>C$, $U>0$,
+$Y>0$, and $V>0$ if $k\le2$, resp.\ $V'>0$ if $k\ge2$, where
+\begin{align*}
+V&=p+(3-2k)(d+\delta)-2(4-k)d_0,\\
+V'&=p-(k-2)-(k-1)(3-k)(d+\delta)-(4-k)^2d_0,\\
+Y&=\frac{(k-1)(3-k)}k\bigl[P-(k-1)(d+\delta)-(4-k)d_0\bigr]+\frac{k^2-3k+3}kp-C.
+\end{align*}
+By Lemma~\ref{lem:rollrows} it remains to show $M>0$ for active $t>h$. Since
+$P_t$ is nondecreasing and $P_t-1<C$ at eligible rows, $P>C$ puts every
+sufficient-eligible row before $s$. In particular $s$ is not eligible:
+$z_s:=g_s-r_a(s)\le(k-1)(d+\delta)+(4-k)d_0$.
+\begin{itemize}
+\item \emph{Eligible $t$:} $M\ge U>0$.
+\item \emph{Ineligible $t\le s$:} here $T\le d+\delta$. For $k\le2$, as
+$3-2k<0$, we get $M\ge V>0$. For $k\ge2$, the bound in
+Lemma~\ref{lem:rollrows}(d) decreases in $T$, so $M\ge V'>0$.
+\item \emph{Ineligible $t\ge s$:} persistence of $a$ from $s$ to $t$ gives
+$X:=P'-P-z+z_s\ge0$, and
+\begin{align*}
+kM_2&=3(\kcap-z)+(k^2-3k+3)(P'-p-u)+(2k-3)(1-T-u)\\
+&\quad+(k-1)(3-k)\bigl[X+(k-1)(d+\delta)+(4-k)d_0-z_s\bigr]+kY,
+\end{align*}
+which is positive. \qedhere
+\end{itemize}
+\end{proof}
+
+\begin{lemma}[Middle rollback]\label{lem:midroll}Let $h$ be a relayed carrier with $g_h<\frac{33}{40}$, $\lambda_h<3(1-g_h)$ and
+$1\le q:=q_h<\frac43$, and suppose $v^h_t<\theta_h(q)$ for every active $t>h$
+that is actual-eligible for $h$ at $q$. Then $k>\frac43$, and the conclusion of
+Lemma~\ref{lem:lowroll} holds.
+\end{lemma}
+
+\begin{proof}
+By (H3) at $h$ and Lemma~\ref{lem:inherit}(b), $\frac43<k<2$ and $d_0<\frac18$,
+so Lemma~\ref{lem:rollrows} applies. Also $\frac7{40}<d\le\frac14$ and
+$p=\lambda_h-d<2d$. The safe edge $[e_a,e_h]$ at $z=\frac12$ gives
+$W\ge d+2d_0$. Let $s$, $\delta$, $w$ and $P$ be as before. Then
+$v^h_s<\theta_h(q)$: by hypothesis if $s$ is actual-eligible, and otherwise by
+the identity $4E^h_s=q(v^h_s-\theta_h(q))+(q-1)[(q-1)g_h+3d]$, valid at
+attainers. So
+\[
+P=(4-q)w-q\delta-4d,\quad P\ge p+w,\quad w\le1-d-\delta,\quad
+q(2-3d-P)\ge3(1-4d).
+\]
+Fact~\ref{fact:mid} gives $k\ge\frac{38}{23}$, $P>C$, $\delta\le d$, $U>0$ and
+$V\ge0$, with $U,V$ as before. As in Lemma~\ref{lem:lowroll}, $s$ is not
+eligible. Since $r_a$ is nonincreasing, $z_s\ge W-\delta$, so
+\begin{align*}
+G&:=k(4-k)\delta-p-(k-2)^2d+(4-k)(3-k)d_0\\
+&\phantom{:}=(4-k)\bigl[(k-1)(d+\delta)+(4-k)d_0-z_s\bigr]+(4-k)(z_s-W+\delta)\ \ge\ 0,
+\end{align*}
+and Fact~\ref{fact:mid} gives $Z:=P-(k-1)+(k-2)^2(d+\delta)-(4-k)^2d_0>0$. The
+rows now follow:
+\begin{itemize}
+\item \emph{Eligible $t$:} $M\ge U>0$.
+\item \emph{Ineligible $t\le s$:} $M\ge V\ge0$, as $k>\frac32$.
+\item \emph{Ineligible $t\ge s$:} using $u\le1-T$, $z\le\kcap$, $P'\ge P$ and
+$T\ge d+\delta$, we get $M\ge M_2\ge P'-(k-1)+(k-2)^2T-(4-k)^2d_0\ge Z>0$.
+\qedhere
+\end{itemize}
+\end{proof}
+
+\section{Proof of Theorem \ref{thm:finite}}\label{sec:selector}
+
+By Lemma~\ref{lem:plateau} the profile may be assumed strict. We run a procedure
+in which every step either returns a certificate, by
+Lemma~\ref{lem:constructors}, \ref{lem:lowroll} or \ref{lem:midroll}, or passes
+to a relayed carrier with a larger index. It therefore stops. Every certificate
+it returns has a point with at most two nonzero coordinates and at most
+$m+3$ pieces.
+
+\paragraph{Root.} The root $a=0$ is a carrier with $\lambda_0=D=0$, strong
+credit and an access path $e_0$.
+\begin{itemize}
+\item If $q_0=0$, apply (V).
+\item Otherwise let $q=\max\{1,q_0\}<3$. An attainer $s$ is
+sufficient-eligible: by Lemma~\ref{lem:attainers}(a) if $q=q_0$, and because
+$S_s(1)=w_s\ge0$ if $q=1$. Let $c$ be the last active sufficient-eligible row.
+If $q\le\frac32$ or $v_c\ge\theta(q)$, apply (S). As $D=0$, its credit
+requirement is $v_c\ge\max\{0,\theta\}$, and $\theta\le0\le v_c$ when
+$q\le\frac32$.
+\item Otherwise $q=q_0>\frac32$. If $q\le2$ and the last actual-eligible $c'$
+has $v_{c'}\ge\theta$, apply (A). If not, let $s$ be an attainer. It is
+sufficient-eligible, so $v_s\le v_c<\theta$, and Lemma~\ref{lem:relay}
+($\lambda_0\ge D$) makes $[e_0,e_s]$ strictly safe. Then $s$ is a relayed
+carrier with parent $0$:
+\begin{itemize}
+\item $g_s>\frac34$, and $g_s<1$ by strictness;
+\item $s$ has strong credit by Lemma~\ref{lem:transfer};
+\item (H3) holds by the failed test at $c'$ (if $q\le2$) or at $c$ (if $q>2$),
+since $v$ is monotone;
+\item (H4) is vacuous.
+\end{itemize}
+\end{itemize}
+
+\paragraph{Relayed carrier $h$ with parent $a$.} Let $q=q_h$.
+\begin{enumerate}[label=(\roman*)]
+\item $q=0$: apply (V).
+\item $0<q\le1$: if some active $t>h$ is actual-eligible, apply (L). Otherwise
+$g_h<\frac{1281}{1600}$ by Lemma~\ref{lem:attainers}(c). Moreover
+$k\ge\frac43$: else (H4), (H3) at $h$ and Lemma~\ref{lem:inherit}(a) would give
+$g_h>\frac{1281}{1600}$. Apply Lemma~\ref{lem:lowroll}.
+\item $q\ge\frac43$: an attainer $s$ is sufficient-eligible
+(Lemma~\ref{lem:attainers}(a)). Apply (A) if $q\le2$ and (S) if $q>2$ (then
+$\max\{2D,\theta\}=\theta$) at the last eligible $c\ge s$. If its credit test
+fails, then $v_s\le v_c<\theta$, Lemma~\ref{lem:relay} makes $[e_h,e_s]$
+strictly safe, and $s$ is a relayed carrier with parent $h$.
+\item $1<q<\frac43$ and $g_h\ge\frac{33}{40}$: an attainer $s$ is actual-eligible
+(Lemma~\ref{lem:attainers}(b)). Apply (A) at the last actual-eligible $c\ge s$,
+or else relay to $s$ by Lemma~\ref{lem:relay}.
+\item $1<q<\frac43$, $g_h<\frac{33}{40}$ and $\lambda_h\ge3(1-g_h)$: by
+Lemma~\ref{lem:attainers}(a),(d), an attainer $s$ is sufficient-eligible with
+$v_s\ge\theta$. So (A) succeeds at the last actual-eligible $c\ge s$.
+\item $1<q<\frac43$, $g_h<\frac{33}{40}$ and $\lambda_h<3(1-g_h)$: if some active
+$t>h$ is actual-eligible, let $c$ be the last such row, and apply (A) if
+$v_c\ge\theta_h(q)$. If there is no such row, or $v_c<\theta_h(q)$, apply
+Lemma~\ref{lem:midroll}, whose hypothesis holds because $v^h$ is nondecreasing.
+\end{enumerate}
+A relay in (iii) or (iv) produces a relayed carrier:
+\begin{itemize}
+\item $g_s<1$ by strictness, and $g_s>\frac34$;
+\item $s$ has strong credit by Lemma~\ref{lem:transfer}, and an access path
+$\pi_h$ followed by $[e_h,e_s]$;
+\item (H1) holds because $1\le q<3$, and (H3) by the failed test;
+\item (H4) holds because relays with $q<\frac43$ occur only in (iv).
+\end{itemize}
+This proves Theorem~\ref{thm:finite}, and with
+Proposition~\ref{prop:reduction}, Theorem~\ref{thm:main}. \hfill$\qed$
+
+\appendix
+\section{Scalar facts}\label{app:facts}
+
+All variables are real. Each fact is followed by its certificate. Bernstein
+coefficients are taken on the stated interval, so positive coefficients prove
+positivity there.
+
+\begin{fact}[Actual tail]\label{fact:actual}Let $1\le q\le2$, $\mu=q-\frac{q^2}4$, $\frac34\le A\le1$, $B=4A-3$,
+$\delta\ge0$, $w\le A-\delta$ and $\mu w<\mu A-B+(q-\mu)\delta$. Then
+$F:=(3-\mu)w-\mu\delta-(1-\mu)A\le\theta:=2A-3B/q$.
+\end{fact}
+\begin{proof}
+With $Z=(q-\mu)\delta+\mu A-B-\mu w>0$ and $Y=A-\delta-w\ge0$:
+$q\mu(\theta-F)=\frac14q^2(q-1)(B-q\delta)+q(3-\mu)Z$ (use if $q\delta\le B$) and
+$q(\theta-F)=3(q\delta-B)+q(3-\mu)Y$ (use if $q\delta\ge B$).
+\end{proof}
+
+\begin{fact}[Exit]\label{fact:exit}Let $\frac34\le A\le1$, $\lambda,L\ge0$, $0\le u\le G\le A$, $L+u\ge A+\lambda$,
+$0\le q<2$, $\beta=1-\frac q4$ and $q(A-u)\ge3G-4u-L+4A-3$. Suppose
+$\lambda\ge\frac32(1-A)$, or $q\ge1$ and $A+\lambda\ge1$. Then $u(L+G)\ge G^2$
+or $2\beta u\le G$.
+\end{fact}
+\begin{proof}
+Suppose not. Then $G,u>0$ and $r:=u/G\in(\frac1{2\beta},1)$. Put
+\[
+\Gamma=r+\tfrac1r-1\ge1,\qquad D_r=4-\tfrac1r+4\beta(1-r)>0,\qquad
+\Psi=r+\Gamma-\tfrac{4-1/r}{4\beta},\qquad J=L+u.
+\]
+\begin{itemize}
+\item From $G^2-u(L+G)=u(G\Gamma-J)$: $J<G\Gamma$.
+\item The hypothesis is $A\le u+\frac{3-3G+L}{4\beta}$; with $L<G\Gamma-u$
+this gives $A<\bar A:=Gr+\frac{3-G(4-1/r)}{4\beta}$.
+\item Then $G\le A<\bar A$ gives $GD_r<3$.
+\item As $\frac1{4\beta}<\frac r2$: $\Psi>\frac1r-\frac12>0$.
+\end{itemize}
+If $\lambda\ge\frac32(1-A)$:
+\[
+3\le3A+2\lambda\le A+2J<\bar A+2G\Gamma=\tfrac3{4\beta}+G(\Psi+\Gamma)
+<\tfrac3{4\beta}+\tfrac{3(\Psi+\Gamma)}{D_r}=\tfrac{3(1+2\Gamma)}{D_r}<3,
+\]
+using $\frac{D_r}{4\beta}+\Psi=1+\Gamma$ and
+$D_r-1-2\Gamma=(1-r)((4\beta+2)r-3)/r>0$.
+
+If $q\ge1$ (so $\beta\le\frac34$) and $A+\lambda\ge1$:
+$1\le J<G\Gamma<3\Gamma/D_r<1$, using $D_r-3\Gamma=(1-r)((4\beta+3)r-4)/r>0$.
+\end{proof}
+
+\begin{fact}[Credit transfer]\label{fact:transfer}Let $0\le d<\frac14$, $A=1-d$, $B=1-4d$, and $v,e,w\ge0$ with
+$r:=A-e-w\ge0$, $v+w<\frac12$ and $A-ez-rz(1-z)\ge\frac34$ on $[0,1]$. Then
+$d+e\le(v+w)(1-v-w)$.
+\end{fact}
+\begin{proof}
+At $z=1$, $A-e\ge\frac34$, so $r-e=2(A-e)-A-w>0$. Hence
+$z^*=\frac{e+r}{2r}\in[0,1]$, and the value at $z^*$ gives $Br\ge(e+r)^2$, that
+is, $Be\le(A-w)(w-3d)$. Now
+\[
+B\bigl[(v+w)(1-v-w)-d\bigr]-(A-w)(w-3d)=(v+d)^2+(1-2v-2w)\bigl[v+2d(1-v-w)\bigr]\ge0.\qedhere
+\]
+\end{proof}
+
+\paragraph{Attainer data.} Facts~\ref{fact:elig33}--\ref{fact:stop} share these
+hypotheses. Let $\frac34\le A=1-d\le1$, $V\ge0$, $L=V+d$, $D=3d$, $B=1-4d$, and
+$0<q<3$. Let $\delta\ge0$, $w$ and $v$ satisfy $q(\delta+w)=4w-v-D$ and
+$v\ge L+w$, and put $E=B-q\delta-(q-\frac{q^2}4)(A-\delta-w)$. Then
+$4E=qv+(q-2)^2A-(4-q)D$ and $(3-q)v=(4-q)(v-w)+q\delta+D\ge(4-q)L+D$, so
+\begin{equation}\label{eq:Phi}
+4(3-q)E\ \ge\ \Phi(q,V,d):=(3-q)(q-2)^2+q(4-q)V+(q^3-11q^2+44q-48)\,d .
+\end{equation}
+
+\begin{fact}[Eligibility at $\frac{33}{40}$]\label{fact:elig33}With attainer data, $0<d\le\frac7{40}$, $V\ge d$ and $1\le q\le2$: $E>0$.
+\end{fact}
+\begin{proof}
+As $V\ge d$, $\Phi\ge(3-q)(q-2)^2+\kappa(q)d$, where
+$\kappa(q)=q^3-12q^2+48q-48$. This $\kappa$ is increasing
+($\kappa'=3(q-4)^2$) and $\kappa(\frac32)=\frac38$.
+\begin{itemize}
+\item If $\kappa(q)\ge0$: $\Phi\ge(3-q)(q-2)^2>0$ for $q<2$, and $\Phi\ge8d>0$
+at $q=2$.
+\item If $\kappa(q)<0$: then $q<\frac32$ and
+$\Phi\ge(3-q)(q-2)^2+\frac7{40}\kappa(q)=\frac1{40}(144-304q+196q^2-33q^3)$. Its
+Bernstein coefficients on $[1,\frac32]$ are $\frac3{40},\frac7{240},\frac{89}{480},\frac{141}{320}$.
+\qedhere
+\end{itemize}
+\end{proof}
+
+\begin{fact}[Eligibility at $\frac{1281}{1600}$]\label{fact:elig1281}
+With attainer data, $A\ge\frac{1281}{1600}$, $0<q\le1$, and $V\ge\frac12$ or
+$d\le V(1-V)$: $E>0$.
+\end{fact}
+\begin{proof}
+Let $V_0=\frac12(1-\sqrt{1-4d})$. Then $V\ge V_0$, and
+$d\le\frac{319}{1600}=\frac{11}{40}\cdot\frac{29}{40}$ gives $V_0\le\frac{11}{40}$.
+Since $\Phi$ increases in $V$ and $d=V_0(1-V_0)$, $\Phi\ge\varphi(V_0)$ with
+$\varphi(z):=\Phi(q,z,z(1-z))$. On $[0,\frac{11}{40}]$,
+$\varphi'(z)=q(4-q)+(q^3-11q^2+44q-48)(1-2z)\le3-14\cdot\frac9{20}<0$, because
+$3-q(4-q)=(1-q)(3-q)\ge0$ and $q^3-11q^2+44q-48+14=(q-1)(q^2-10q+34)\le0$. So
+$\Phi\ge\varphi(\frac{11}{40})=\frac1{1600}(3888-9804q+7251q^2-1281q^3)$. Its
+Bernstein coefficients are all at least $\frac1{3200}$:
+\begin{gather*}
+[0,\tfrac12]:\ \tfrac{243}{100},\tfrac{1127}{800},\tfrac{4897}{6400},\tfrac{5109}{12800};\qquad
+[\tfrac12,\tfrac34]:\ \tfrac{5109}{12800},\tfrac{5533}{25600},\tfrac{5249}{51200},\tfrac{4689}{102400};\\
+[\tfrac34,\tfrac78]:\ \tfrac{4689}{102400},\tfrac{3569}{204800},\tfrac{269}{81920},\tfrac{1473}{819200};\qquad
+[\tfrac78,1]:\ \tfrac{1473}{819200},\tfrac1{3200},\tfrac{147}{12800},\tfrac{27}{800}.
+\qedhere
+\end{gather*}
+\end{proof}
+
+\begin{fact}[Baseline stop]\label{fact:stop}With attainer data, $1\le q\le\frac32$ and $L\ge D$: $v\ge2A-3B/q$.
+\end{fact}
+\begin{proof}
+$(3-q)v=(4-q)(v-w)+q\delta+D\ge(4-q)L+D\ge(5-q)D$, and
+$q(5-q)D-(3-q)(2Aq-3B)=A(3-2q)(3-q)+D(8q-q^2-9)$. If $8q-q^2-9<0$, rewrite the
+right side via $(3-2q)(3-q)+(8q-q^2-9)=q(q-1)$ as
+$Aq(q-1)+(A-D)(q^2-8q+9)\ge0$.
+\end{proof}
+
+In Facts~\ref{fact:highq}--\ref{fact:smallparent},
+$\cE(\beta,\omega)=\beta^2-\beta(2A+2\omega-D)+D(A+\omega)$ with $A=1-d$,
+$D=3d$, $B=1-4d$ and $L=V+d$.
+
+\begin{fact}[Relay, $q\ge\frac32$]\label{fact:highq}If $0<V<\frac12$ and $0<d\le V(1-V)$, then $\cE(L,\frac23(L+D))<0$.
+\end{fact}
+\begin{proof}
+$3\cE(L,\frac23(L+D))=-V^2-6V+7Vd+3d+17d^2$ increases in $d$. At
+$d=V(1-V)$ it equals $V(17V^3-41V^2+20V-3)$. The cubic has Bernstein
+coefficients $-3,-\frac43,-\frac{25}{48},-\frac{19}{64}$ on $[0,\frac14]$ and
+$-\frac{19}{64},-\frac7{96},-\frac7{16},-\frac98$ on $[\frac14,\frac12]$.
+\end{proof}
+
+\begin{fact}[Relay, $A\ge\frac{33}{40}$]\label{fact:highanchor}Let $0<d\le\frac7{40}$, $V>0$, $L<D$ and $d\le V(1-V)$. Let $1\le q<3$, $b\ge L$,
+$\delta\ge0$ and $w$ satisfy $(3-q)w=q\delta+b+D$ and $(2A-b-w)q>3B$. Then
+$w>D$ and $\cE(L,D)<0$.
+\end{fact}
+\begin{proof}
+$\cE(L,D)=V^2+Vd-2V+d+6d^2$ increases in $d$.
+\begin{itemize}
+\item If $V\le\frac9{40}$: $d\le V(1-V)$ gives
+$\cE(L,D)\le V(6V^3-13V^2+7V-1)$. The cubic increases on $[0,\frac9{40}]$ and
+equals $-\frac{473}{32000}$ there.
+\item If $V>\frac9{40}$: then $V<2d\le\frac7{20}$, and $d\le\frac7{40}$ gives
+$\cE(L,D)\le V^2-\frac{73}{40}V+\frac{287}{800}$. This is convex, with values
+$-\frac1{800}$ and $-\frac{63}{400}$ at $\frac9{40}$ and $\frac7{20}$.
+\end{itemize}
+Suppose $w\le D$. Then $w>0$ (as $q<3$ and $b+D>0$), $b\le2w-D\le D$, $q\le3-\frac{b+D}w$ and
+$2A-b-w>0$. Put $f_\beta(w)=(2A-\beta-w)(3-\frac{\beta+D}w)$. Then
+\[
+3B<(2A-b-w)q\le f_b(w)\le f_L(w)\le f_L(D)=3B+\cE(L,D)/D<3B,
+\]
+a contradiction. Here:
+\begin{itemize}
+\item $w(f_L(w)-f_b(w))=(b-L)(2w+2A-D-b-L)\ge0$, since $2A-D-b-L>2-11d>0$;
+\item $Dw(f_L(D)-f_L(w))=(D-w)[(2A-L)(L+D)-3Dw]\ge0$, since
+$(2A-L)(L+D)-3D^2=d(10-47d)+(L-2d)(2-7d-L)>0$.
+\qedhere
+\end{itemize}
+\end{proof}
+
+\begin{fact}[Relay, $\frac43\le q\le2$]\label{fact:fourthirds}Let $0<V<\frac12$, $\frac V2<d\le V(1-V)$, $\frac43\le q\le2$ and
+$\theta=2A-3B/q$. Let $b\ge L$, $\delta\ge0$ and $w$ satisfy
+$(3-q)w=q\delta+b+D$ and $b+w<\theta$, and put $r=A-\delta-w$. Then
+$\frac B4-\delta z-rz(1-z)>0$ for all $z\in[0,1]$.
+\end{fact}
+\begin{proof}
+Fix $z$. For fixed $b$ the hypotheses describe the segment of the line
+$(3-q)w=q\delta+b+D$ with $w_\ell:=\frac{b+D}{3-q}\le w<w_\tau:=\theta-b$, and
+the target is affine along it.
+\begin{itemize}
+\item At $w=w_\ell$ (where $\delta=0$) the target is at least
+$\frac14(B-\max\{r,0\})>0$, as $r=A-w_\ell<A-D=B$. This uses
+$w_\ell\ge\frac{L+D}{3-q}>D$, from $L>2d\ge(2-q)D$.
+\item At $w=w_\tau$ the target is affine in $b\in[L,b_{\max}]$, where
+$w_\ell(b_{\max})=w_\tau(b_{\max})$; at $b_{\max}$ it is positive by the first
+point.
+\end{itemize}
+So it suffices to treat $b=L$, i.e.\ to show $J^*(q,z)\ge0$, where
+\[
+J^*(q,z):=\tfrac B4-\delta^*z-o^*z(1-z),\qquad w^*=\theta-L,\qquad
+\delta^*=\tfrac{(3-q)w^*-L-D}q,\qquad o^*=A-\delta^*-w^*.
+\]
+\emph{At $q=\frac43$:} $w^*=-\frac14+6d-V$, $\delta^*=-\frac5{16}+\frac92d-2V$,
+$A-w^*=\frac54-7d+V$ and $o^*-\delta^*=\frac{15}8-16d+5V$. Also
+$J^*(0)=\frac B4>0$ and
+$J^*(1)=\frac1{16}(9-88d+32V)\ge\frac1{16}(88(V-\frac7{22})^2+\frac1{11})>0$.
+A negative interior minimum needs $o^*>0$, $A-w^*=\delta^*+o^*>0$,
+$o^*-\delta^*>0$ and $M^*:=Bo^*-(A-w^*)^2<0$. Now
+$M^*=-V^2+2dV+\frac V2-\frac d4-3d^2$ is concave in $d$, and:
+\begin{itemize}
+\item at $d=\frac V2$: $M^*=\frac38V(1-2V)\ge0$;
+\item at $d=V(1-V)$: $M^*=-\frac14V(2V-1)^2(3V-1)$, which is $\ge0$ if
+$V\le\frac13$.
+\end{itemize}
+If $V>\frac13$, the conditions force $d<d_\ell:=\frac5{28}+\frac V7$ and
+$d<d_r:=\frac{15}{128}+\frac{5V}{16}$. For $V\le\frac{55}{152}$ (where
+$d_r\le d_\ell$), $M^*(d_r)=\frac{171}{256}(V-\frac7{24})(\frac{55}{152}-V)\ge0$.
+For $V\ge\frac{55}{152}$, at $d=d_\ell$ one has $A-w^*=0$, $B=\frac{2-4V}7$,
+$\delta^*=\frac{55-152V}{112}\le0$ and $M^*=-B\delta^*\ge0$. By concavity
+$M^*\ge0$ wherever needed, so $J^*(\frac43,\cdot)\ge0$.
+
+\emph{For $q\ge\frac43$:} the point $(b,w,\delta)=(L,w^*,\delta^*)$ satisfies
+$v=\theta$, so \eqref{eq:relay} gives $3M^*(q)+\cE^*(q)=0$. Here
+$M^*(q)=Bo^*-(A-w^*)^2$ and $\cE^*=\cE(L,w^*)$, and
+\[
+q\cE^*=3q(V^2+4Vd-2V+d)+3(-d+4d^2+2V-8Vd),\qquad V^2+4Vd-2V+d\le-V(2V-1)^2\le0.
+\]
+\begin{itemize}
+\item If $\frac43\cE^*(\frac43)\le0$: then $q\cE^*(q)\le0$ for $q\ge\frac43$, so
+$M^*\ge0$. Hence $J^*\ge0$: if $o^*>0$, its minimum is $M^*/(4o^*)$, and if
+$o^*\le0$ then $M^*\ge0$ forces $o^*=\delta^*=0$.
+\item Otherwise $V>\frac13$, by the case $q=\frac43$. Also
+$d>d_1:=\frac{8V+1}{20}$: the function $\frac43\cE^*(\frac43)$ is convex in $d$,
+equal to $-\frac32V(1-2V)\le0$ at $d=\frac V2$ and to
+$\frac2{25}(34V^2-19V+1)\le0$ at $d=d_1$. Now $F(q,z):=q^2J^*(q,z)$ is
+quadratic in $q$ with leading coefficient $A-\frac34+z(A-L)+Az^2>0$, and
+\[
+3\partial_qF(\tfrac43,z)=(2-8d)+(20d-8V-1)z+(31d+12V-10)z^2 .
+\]
+Its constant and linear coefficients are positive, and its coefficient sum
+$43d+4V-9>\frac{424V-137}{20}>0$; hence it is positive on $[0,1]$. So $F$
+increases on $[\frac43,\infty)$, and
+$J^*(q,z)\ge(\frac4{3q})^2J^*(\frac43,z)\ge0$. \qedhere
+\end{itemize}
+\end{proof}
+
+\begin{fact}[Small parent]\label{fact:smallparent}Let $\frac{33}{40}\le A<1$, $V\ge\frac12$ or $d\le V(1-V)$,
+$1\le k\le\frac43$, and let $e\ge0$, $W$ and $b\ge L$ satisfy
+$(3-k)W=ke+b+D$ and $b+W<\theta:=2A-3B/k$. Then
+$A-e>\frac{27}{20}-\sqrt{3/10}>\frac{1281}{1600}$.
+\end{fact}
+\begin{proof}
+From $b+W<\theta$:
+$ke<(3-k)\theta-(4-k)L-D$, i.e.\
+$e<e_*(k):=-(2A-L)+\frac{9A-4L-4D}k-\frac{9B}{k^2}$.
+\begin{itemize}
+\item $e_*$ is increasing. Indeed $k^3e_*'=18B-k(9A-4L-4D)$, and
+$3(18B-k(9A-4L-4D))\ge54B-4(9A-4L-4D)=18A-38D+16L\ge18-100d>0$ when
+$9A-4L-4D\ge0$ (as $L\ge2d$).
+\item Hence $e<e_*(\frac43)=-\frac5{16}+\frac92d-2V$, i.e.\
+$A-e>\frac{21}{16}-\frac{11}2d+2V$.
+\end{itemize}
+Let $u_0=\frac12(1-\sqrt{3/10})$, so $u_0(1-u_0)=\frac7{40}$.
+\begin{itemize}
+\item If $V\ge u_0$: $d\le\frac7{40}$ gives $A-e>\frac7{20}+2u_0$.
+\item If $V<u_0$: $d\le V(1-V)$ gives $A-e>h(V):=\frac{21}{16}-\frac72V+\frac{11}2V^2$,
+and $h(V)-h(u_0)=(u_0-V)(\frac72-\frac{11}2(V+u_0))\ge0$, with
+$h(u_0)=\frac7{20}+2u_0$.
+\end{itemize}
+Finally $\frac7{20}+2u_0=\frac{27}{20}-\sqrt{3/10}$, and
+$(\frac{879}{1600})^2-\frac3{10}=\frac{4641}{2560000}>0$.
+\end{proof}
+
+\begin{fact}[Baseline upgrade]\label{fact:upgrade}Let $\frac34<A\le1$, $d_0=1-A$, $D_0=3d_0$, $B_0=1-4d_0$, $\lambda\ge2d_0$ and
+$1\le k<3$. Let $e\ge0$ with $A-e\ge\frac34$, and $W$, $b\ge\lambda$ with
+$(3-k)W=ke+b+D_0$, $b+W<2A-3B_0/k$ and $b+W+e<D_0+3e$. Then $\frac43<k<2$ and
+$d_0<\frac18$.
+\end{fact}
+\begin{proof}
+$(3-k)(b+W+e-D_0-3e)=(4-k)b-(2-k)(D_0+3e)$ and $D_0+3e\le\frac34$. For $k\ge2$
+the right side is $\ge0$; for $k\le2$ and $\lambda\ge\frac14$ it is
+$\ge\frac{4-k}4-\frac34(2-k)=\frac{k-1}2\ge0$. So $k<2$ and $\lambda<\frac14$,
+hence $d_0<\frac18$.
+
+If $k\le\frac43$, then $(3-k)(b+W)=(4-k)b+ke+D_0\ge(11-2k)d_0$, so
+\[
+k(3-k)\bigl[b+W-2A+\tfrac{3B_0}k\bigr]\ge(2-4d_0)k^2+(29d_0-9)k+9-36d_0
+\ge\tfrac18(3k-4)(4k-9)\ge0.
+\]
+The middle step uses that the $d_0$-coefficient $-4k^2+29k-36$ is negative on
+$[1,\frac43]$. This contradicts $b+W<2A-3B_0/k$.
+\end{proof}
+
+\begin{fact}[Low rollback]\label{fact:low}Assume:
+\begin{enumerate}[label=(\roman*)]
+\item $\frac43\le k<3$, $0\le d_0\le d$, $\frac{319}{1600}<d\le\frac14$, and
+$V_a\ge0$ with $V_a\ge\frac12$ or $d_0\le V_a(1-V_a)$;
+\item $p=(4-k)W-kd-(4-k)d_0$, $p\ge W+V_a$ and $p<C=2-\frac3k+\frac{3(4-k)d_0}k$;
+\item $0<q\le1$, $\delta\ge0$, $0\le w\le1-d-\delta$,
+$P=(4-q)w-q\delta-4d$, $P\ge p+w$ and $qP\le(4-q)^2d-(q-2)^2$.
+\end{enumerate}
+Then $\frac{40}{23}<k<\frac{40}{17}$, $P>C$, $U>0$ and $Y>0$, and $V>0$ if
+$k\le2$, $V'>0$ if $k\ge2$ ($U,V,V',Y$ as in Lemma~\ref{lem:lowroll}).
+\end{fact}
+\begin{proof}
+\emph{Sources.} The following are nonnegative:
+\begin{align*}
+F_1&=(3-k)p-kd-2(4-k)d_0=(4-k)(p-W-d_0),\\
+F_2&=(3-q)P-q\delta-4d-(4-q)p=(4-q)(P-p-w),\\
+F_3&=(4-q)(1-d)-4\delta-4d-P=(4-q)(1-d-\delta-w),\\
+F_4&=(4-q)^2d-(q-2)^2-qP .
+\end{align*}
+Here $V_a\ge d_0$. Let
+$c=(3-q)(4-q)^2-4q=14+25(1-q)+8(1-q)^2+(1-q)^3$, $n=(3-q)(q-2)^2$,
+$a=q(4-q)\le3$ and $D_q=q^2-3q+3>0$. Then
+\[
+J:=qF_2+(3-q)F_4=cd-n-ap-q^2\delta\ge0,
+\]
+and $F_5:=(5-3q)d-p-D_q\delta\ge0$, by
+$4(4-q)F_5=(q-2)^2[(3-q)F_3+F_2]+(4-q)J$.
+
+\emph{Range of $k$; sign of $\eta:=20-11k+(2k-5)q$.} $F_1\ge0$ and $p<C$ give
+$(d+2)k^2-9k+9<(4-k)(9-5k)d_0$.
+\begin{itemize}
+\item For $k\ge\frac95$ the right side is $\le0$. The left side increases in
+$d$ and equals $\frac9{1600}(23k-40)(17k-40)$ at $d=\frac{319}{1600}$, so
+$\frac{40}{23}<k<\frac{40}{17}$. For $k\ge\frac{20}{11}$, $\eta<0$ is clear.
+\item Let $\frac43\le k\le\frac{20}{11}$. Put $R=(3-k)c-ka\ge\frac{122}{11}$,
+$\beta=(9-4k)c-3ka\ge\frac{86}{11}$, $L'=\beta-kc$ and
+$\Sigma=k^2n-(2k-3)R$. The sources $F_{\rm par}=(3-k)p-kd-(4-k)(d_0+V_a)$,
+$F_{\rm cr}=k(C-p)$ and $cd-n-ap=J+q^2\delta$ are nonnegative, and
+\[
+kc\,F_{\rm par}+k^2(cd-n-ap)+R\,F_{\rm cr}=-\Sigma-(4-k)(kcV_a-\beta d_0).
+\]
+With $v=\min\{V_a,\frac12\}$, we have $d_0\le v(1-v)$ and $V_a\ge v$, so
+$\Sigma+(4-k)(\beta v^2-L'v)\le0$ \ $(\ast)$.
+
+$\Sigma$ is convex in $k$: with $x=1-q$, $\partial_k^2\Sigma=6(12+17x+6x^2+x^3)$
+and $-\partial_k\Sigma(\frac{20}{11},q)=\frac3{11}(15+123x+13x^2-7x^3)>0$, so
+$\Sigma$ decreases in $k$. If $\eta\ge0$, then
+$k\le K_\eta:=\frac{5(4-q)}{11-2q}\le\frac{20}{11}$ and
+$\Sigma\ge\Sigma(K_\eta)=\frac{3P_\eta(q)}{(11-2q)^2}$, with
+$P_\eta=144-468q+637q^2-363q^3+84q^4-7q^5$; the Bernstein coefficients of
+$10P_\eta$ are $1440,504,205,180,234,270$. If $k\le\frac{40}{23}$, then
+$\Sigma\ge\Sigma(\frac{40}{23})=\frac3{529}(18+285y+1136y^2-427y^3)>0$, where
+$y=q-1\le0$ and $285^2<4\cdot1136\cdot18$. In both cases $\Sigma>0$.
+\begin{itemize}
+\item If $L'\le0$, this contradicts $(\ast)$.
+\item If $L'>0$, then $k<K_L:=\frac{9c}{5c+3a}\le\frac95$, and
+$4\beta[\Sigma+(4-k)(\beta v^2-L'v)]=(4-k)(2\beta v-L')^2+Z$ with
+$Z:=4\beta\Sigma-(4-k)L'^2=k\,J_Z(k,q)$. Here $J_Z$ is concave in $k$:
+$-\frac12\partial_k^2J_Z=3119+7994x+8025x^2+4444x^3+1473x^4+266x^5+23x^6$. The
+Bernstein coefficients of $135J_Z(\frac43,q)$ are
+$34560,6720,15280,33162,46805,50710,43980$, and
+$J_Z(K_L,q)=\frac{36c^3(8+17y+14y^2-7y^3)}{(5c+3a)^2}>0$. So $Z>0$, again
+contradicting $(\ast)$.
+\end{itemize}
+Hence $k>\frac{40}{23}$ and $\eta<0$.
+\end{itemize}
+
+\emph{$P>C$.} From $F_2\ge0$ and $P\ge p$, $3P\ge4p+4d$; with $F_1\ge0$ and
+$d\ge\frac16$,
+$P-C\ge\frac{6k^2-25k+27+(4-k)(17k-27)d_0}{3k(3-k)}>0$, as
+$6k^2-25k+27=6(k-\frac{25}{12})^2+\frac{23}{24}$ and $k>\frac{27}{17}$.
+
+\emph{$U>0$.} For $k\le\frac{20}{11}$:
+\[
+k(3-k)U=k(9-2k)(p-W-d_0)+k(k^2-k+3)d+(-k^3-4k^2+51k-72)d_0+(4k-6)(k-3).
+\]
+Using $d>\frac{319}{1600}$ and $0\le d_0\le d$, the last three terms are at
+least $N_0=\frac1{1600}(319k^3+6081k^2-27843k+28800)$ if the $d_0$-coefficient
+is $\ge0$. Otherwise they are at least
+$N_1=\frac1{1600}(4805k^2-11574k+5832)$, and then the sum $-5k^2+54k-72$ of the
+two coefficients is positive. Bernstein coefficients on
+$[\frac{40}{23},\frac{20}{11}]$:
+\begin{itemize}
+\item $-5k^2+54k-72$: $\frac{3592}{529},\frac{2084}{253},\frac{1168}{121}$;
+\item $N_0$: $\frac{136213}{486680},\frac{101179}{465520},\frac{4589}{27830},\frac{1187}{9680}$;
+\item $N_1$: $\frac{15631}{105800},\frac{27799}{101200},\frac{5087}{12100}$.
+\end{itemize}
+For $k\ge\frac{20}{11}$: $p\ge\frac{kd}{3-k}>\frac3{10}$, and $p<C\le\frac54$
+since $\frac54-C=\frac{3(4-k)(1/4-d_0)}k$. Write
+$cd-n-ap=c\,F_6+\mathcal B(q,p)$, with $F_6:=d-\frac3{16}-\frac p{20}$ and
+$\mathcal B$ affine in $p$. Then
+$\mathcal B(q,\frac3{10})=-\frac1{400}(26+265y+832y^2-319y^3)<0$, since
+$265^2<4\cdot832\cdot26$, and $\mathcal B(q,\frac54)=-\frac34q^2(4-q)\le0$. So
+$F_6\ge0$, and
+\begin{align*}
+U&=\frac{(k^2-44k+184)F_1}{3(4-k)(20-7k)}+\frac{20(k^2-k+3)F_6}{3(20-7k)}\\
+&\quad+\frac{(-19k^3-91k^2+1052k-1440)d_0}{3k(20-7k)}+\frac{5k^3+107k^2-473k+480}{4k(20-7k)} .
+\end{align*}
+All coefficients are positive on $[\frac{20}{11},\frac52]$:
+\begin{itemize}
+\item $k^2-44k+184\ge\frac{321}4$;
+\item the $d_0$-cubic is concave, with end values $\frac{76800}{1331}$ and
+$\frac{2595}8$;
+\item $5k^3+107k^2-473k+480=5(k-\frac{20}{11})y'^2+\frac{1497}{11}y'^2+15y'+2$
+with $y'=k-2$.
+\end{itemize}
+
+\emph{$V,V'$.} For $k\le2$ (so $k>\frac32$ and $\eta<0$), put
+$B'=2k-3-(2-k)D_q$, $A'=(3-k)D_q-(2k-3)(5-3q)$ and $F'=(3-k)A'+kB'$. Then
+\begin{gather*}
+(3-k)D_qV=[(3-k)D_q+B']F_1+F'd+2(4-k)B'd_0+(3-k)(2k-3)F_5,\\
+(11-2q)B'=-(D_q+2)\eta+(1-q)(1+q^2)>0,\\
+8(q-3)^2F'=[4(q-3)^2(k-2)+3q]^2+q^2[8(q-3)^2-9]>0 .
+\end{gather*}
+For $k\ge2$, put $x=k-2$ and $L_x=(1-q)-(2-q)x$. Then
+$(1-x)F_5+F_1=3L_xd-(1-x)D_q\delta-2(2-x)d_0$ shows $L_x\ge0$, so
+$x\le\frac12$ and $q\le\frac{1-2x}{1-x}$. With
+$E_x=(1-x)q^2+(6x-9)q+12(1-x)$, which is positive because
+$(2-q)E_x=(q^2-6q+12)L_x+4D_q$,
+\[
+nE_xV'=n(4-q)(4-q-x^2)F_1+N_\beta F_5+(N_\rho+xE_x)J+n(4-k)N_\eta d_0+nN_\rho,
+\]
+where
+\begin{itemize}
+\item $N_\rho=q^2(1+x)+(2-x)x^2(q-3)^2>0$;
+\item $N_\eta=8+5x+20x(\frac12-x)+q^2x(3-x)+8qx^2+2q+21x(1-q)>0$;
+\item $N_\beta=(48-q^3)(1-x)^2(1+x)+q^2(11x^3-14x^2-12x+12)-4q(1-x^2)(13-10x)>0$.
+For the last: $\partial_qN_\beta\le-18x^3+24x^2+16x-28<0$, and at
+$q=\frac{1-2x}{1-x}$, $N_\beta=\frac{7-2x-5x^2+x^3-8x^4+4x^5}{(1-x)^2}>0$.
+\end{itemize}
+
+\emph{$Y>0$.} Let $x=k-2\in(-\frac38,\frac38)$,
+$\Delta_k=3q^2-21q+36-k(q^2-6q+12)>0$, $R$ as above ($R\ge2$), and
+\begin{align*}
+N_1&=(x-1)^2(x+1)q^2+(-x^4-7x^3+13x^2+11x-7)q+4x^4+16x^3-24x^2-16x+20,\\
+N_3&=(x-1)^2(x+1)q-3x^3+6x^2-12,\\
+N_0&=(q^2-8q+20)k^2+(-7q^2+53q-116)k+10q^2-76q+144,\\
+R_0&=(3-q)^2x^2(2-x)+q^2(1+x),\qquad G=qN_1-(k-1)^2(3-k)(4-q)\Delta_k,\\
+R_d&=-(3-q)(2-q)^2x^4+3(q-2)^2x^3+(2-q)(5q^2-25q+54)x^2\\
+&\quad-3(q^3-3q^2-4q+4)x-2q^3+14q^2-20q+12,
+\end{align*}
+and $A_F=4k(4-q)^2(4-q-x^2)$, $A_E=-k(4-q)N_3$, $A_d=-4k(4-k)(4-q)N_0$,
+$A_0=4k(4-q)R_0$, $h_E=(4-q)(kq-6k-3q+21)$. Then
+\begin{align*}
+4(4-q)\Delta_k\,kY&=A_FF_1+4N_1F_2-GF_3+A_EF_4+A_dd_0+A_0,\\
+4(4-q)\Delta_kR\,kY&=(RA_F+16(4-q)G)F_1+(4RN_1+16(3-k)G)F_2+4(4-q)\Delta_kG\delta\\
+&\quad+(RA_E+h_EG)F_4+(RA_d+32(4-k)(4-q)G)d_0+4(4-q)\Delta_kR_d .
+\end{align*}
+The signs on the domain are as follows.
+\begin{itemize}
+\item $N_1\ge\frac{53}8$: the $q$-coefficient of $N_1$ is at most
+$-\frac{347}{512}$, so $N_1\ge3x^4+9x^3-11x^2-5x+13$.
+\item $N_3\le-2x^3+5x^2-x-11\le-9$.
+\item $N_0<0$: $N_0$ is convex in $k$ with negative slope at $k=\frac{40}{17}$, so it decreases on $(K_\eta,\frac{40}{17}]$; and
+$N_0(K_\eta)=\frac{-(q-4)(5q^3-31q^2-19q-24)}{(11-2q)^2}<0$.
+\item $R_0>0$ and $h_E\ge(4-q)(18-5k)>0$.
+\item $R_d>0$: its coefficients of $x^4,x^3,x^2,x,1$ lie in $[-12,0]$,
+$[0,12]$, $[34,\infty)$, $[-12,6]$ and $[\frac{20}7,\infty)$. Hence
+$R_d\ge31x^2-12x+\frac{20}7$ for $x\ge0$, and $R_d\ge25x^2+6x+\frac{20}7$ for
+$x\le0$, both positive.
+\end{itemize}
+The first identity gives $Y>0$ when $G\le0$, the second when $G\ge0$.
+\end{proof}
+
+\begin{fact}[Middle rollback]\label{fact:mid}Assume:
+\begin{enumerate}[label=(\roman*)]
+\item $\frac43\le k\le2$, $0\le d_0\le\frac18$ and $\frac7{40}\le d\le\frac14$;
+\item $p=(4-k)W-kd-(4-k)d_0$, $p\ge W+d_0$, $W\ge d+2d_0$, $p\le2d$ and
+$p\le C$;
+\item $1\le q\le\frac43$, $\delta\ge0$, $0\le w\le1-d-\delta$,
+$P=(4-q)w-q\delta-4d$, $P\ge p+w$ and $q(2-3d-P)\ge3(1-4d)$.
+\end{enumerate}
+Then $k\ge\frac{38}{23}$, $P>C$, $\delta\le d$, $U>0$ and $V\ge0$. If moreover
+$G:=k(4-k)\delta-p-(k-2)^2d+(4-k)(3-k)d_0\ge0$, then
+$Z:=P-(k-1)+(k-2)^2(d+\delta)-(4-k)^2d_0>0$.
+\end{fact}
+\begin{proof}
+\emph{Sources.} $F_1$ and $F_2$ are as in Fact~\ref{fact:low},
+$F_3'=(3-q)(1-d)-4d-p-3\delta\ge0$, and
+$J_m:=qF_2+(3-q)[q(2-3d-P)-3(1-4d)]=(36-25q+3q^2)d-(3-q)(3-2q)-q(4-q)p-q^2\delta\ge0$.
+Also $p\ge W+d_0\ge d+3d_0$.
+
+\emph{$k\ge\frac{38}{23}$.} For $k<\frac95$:
+\[
+0\le C-p+\tfrac{3F_1}{2k}=2-\tfrac3k+\tfrac{(9-5k)p}{2k}-\tfrac{3d}2\le2-\tfrac3k+\bigl(\tfrac9k-\tfrac{13}2\bigr)d .
+\]
+For $k\le\frac{18}{13}$ the right side is at most $\frac38-\frac3{4k}<0$, using
+$d\le\frac14$. For $k>\frac{18}{13}$ it is at most $\frac{69}{80}-\frac{57}{40k}$,
+using $d\ge\frac7{40}$, which is negative for $k<\frac{38}{23}$.
+
+\emph{$P>C$, $\delta\le d$, $V\ge0$.} $2P=3p+4d+F_2+q\delta+(q-1)(P-p)$ gives
+$P\ge\frac72d+\frac92d_0\ge\frac{49}{80}+\frac92d_0$, while
+$C\le\frac12+3d_0$ ($C$ increases in $k$); so $P-C\ge\frac9{80}>0$. Next
+$(3-2q)F_3'+J_m=(3-q)[(5-q)d-(3-q)\delta-(q+1)p]$ and $p\ge d$ give
+$\delta\le\frac{2(2-q)}{3-q}d\le d$. Finally
+$V=F_1+(2-k)(3d-p)+(2k-3)(d-\delta)\ge0$.
+
+\emph{Floors.} As $36-25q+3q^2=8+17(\frac43-q)+3(\frac43-q)^2>0$, $J_m\ge0$
+gives $L_1:=d-\frac2{25}-\frac{2p}5\ge0$ for $\frac{19}{80}\le p\le\frac3{10}$
+and $L_2:=d-\frac18-\frac p4\ge0$ for $\frac3{10}\le p\le\frac12$. Indeed, for
+the candidate floor $\ell(p)$, the quantity
+$(36-25q+3q^2)\ell(p)-(3-q)(3-2q)-q(4-q)p$ is affine in $p$, with endpoint
+values $-\frac3{80}(3q-4)(11q-18)$, $-\frac1{10}(11q^2-28q+18)$ and
+$-\frac34q(q-1)$, all $\le0$.
+
+\emph{$U>0$.} For $\frac{38}{23}\le k\le\frac74$:
+\begin{align*}
+2k(4-k)U&=(24-3k-k^2)F_1+(k^3+4k^2-51k+72)(2d-p)\\
+&\quad+(-k^3-19k^2+134k-144)(d-\tfrac7{40})+\tfrac1{40}(-7k^3+187k^2-822k+912).
+\end{align*}
+The coefficients are monotone on the interval, with minima $\frac{251}{16}$,
+$\frac{23}{64}$, $\frac{255720}{12167}$ and $\frac{555}{64}$.
+
+For $\frac74\le k\le2$: here $p\ge\frac{kd}{3-k}\ge\frac{49}{200}$ and
+$p\le2d\le\frac12$, so $L_1\ge0$ or $L_2\ge0$, and
+\begin{align*}
+k(4-k)(15-7k)U&=k(2k^2-18k+53)F_1+5k(4-k)(k^2-k+3)L_1\\
+&\quad+(4-k)(-3k^3-42k^2+319k-360)d_0\\
+&\quad+\tfrac25(4-k)(k^3+69k^2-252k+225),\\
+k(4-k)(12-5k)U&=k(k^2-12k+40)F_1+4k(4-k)(k^2-k+3)L_2\\
+&\quad+(4-k)(-3k^3-27k^2+236k-288)d_0\\
+&\quad+\tfrac12(4-k)(k^3+39k^2-153k+144).
+\end{align*}
+All coefficients are positive:
+\begin{itemize}
+\item the $d_0$-cubics are concave, with end values $\frac{3427}{64},86$ and
+$\frac{1679}{64},52$;
+\item with $x=k-\frac74$, the constant cubics are
+$x^3+\frac{297}4x^2-\frac{21}{16}x+\frac{43}{64}$ and
+$x^3+\frac{177}4x^2-\frac{117}{16}x+\frac{67}{64}$, positive because their
+quadratic parts have negative discriminants.
+\end{itemize}
+
+\emph{$Z>0$.} $L_P:=2P-3p-4d-\delta=F_2+(q-1)(P-p+\delta)\ge0$, and with
+$\alpha=(k-2)^2$,
+\begin{gather*}
+2k(4-k)Z=T+k(4-k)L_P+(1+2\alpha)G,\\
+T:=(13-\alpha)p+(16+5\alpha)d-(4-k)(27-k-2k^2)d_0-2k(4-k)(k-1).
+\end{gather*}
+For $\frac43\le k\le\frac74$, put $Q_0=27-k-2k^2$,
+$H_z=2k^3-3k^2-38k+63$, $D_z=-2k^3+9k^2-13k+72$ and $E_z=(3-k)D_z-kH_z$. Then
+\begin{align*}
+2T&=Q_0F_1+H_z(2d-p)+(D_z-2H_z)(d-\tfrac7{40})+\tfrac1{40}N_+&&(H_z\ge0),\\
+2(3-k)T&=(3-k)Q_0F_1-H_z[(3-k)p-kd]+E_z(d-\tfrac7{40})+\tfrac1{40}N_-&&(H_z\le0),
+\end{align*}
+where $(3-k)p-kd=F_1+2(4-k)d_0\ge0$ and
+\begin{align*}
+N_+&=118k^3-695k^2+1081k-378=7(D_z-2H_z)-160k(4-k)(k-1),\\
+N_-&=-160k^4+1196k^3-2494k^2+702k+1512=7E_z-160k(3-k)(4-k)(k-1).
+\end{align*}
+Both decrease on $[\frac43,\frac74]$, to $\frac{567}{32}$ and $\frac{189}{16}$.
+So $N_\pm>0$, hence also $D_z-2H_z>0$ and $E_z>0$.
+
+For $\frac74\le k\le2$, with $L_1$ or $L_2$:
+\begin{align*}
+(15-7k)T&=(5k^2-20k+117)F_1+15(4-k)(2k^2-5k+9)L_1\\
+&\quad+(4-k)(-14k^3+33k^2+164k-171)d_0+\tfrac25(4-k)(35k^3-104k^2+60k+27),\\
+(12-5k)T&=(k^2-4k+72)F_1+12(4-k)(2k^2-5k+9)L_2\\
+&\quad+(4-k)(-10k^3+21k^2+139k-180)d_0+\tfrac12(4-k)(20k^3-62k^2+33k+27).
+\end{align*}
+All coefficients are positive on $[\frac74,2]$:
+\begin{itemize}
+\item the $d_0$-cubics are concave, with end values $\frac{4545}{32},177$ and
+$\frac{2367}{32},102$;
+\item $35k^3-104k^2+60k+27$ is increasing from $\frac{69}{64}$;
+\item $20k^3-62k^2+33k+27=20y^3+43y^2-\frac y4+\frac{33}{16}$ with
+$y=k-\frac74$.
+\qedhere
+\end{itemize}
+\end{proof}
+
+\section{Correspondence with the Lean development}\label{app:lean}
+
+Each statement is proved in the following modules of
+\nolinkurl{ConsistentSubmodular/Deterministic/Certificates/}; the module
+\texttt{CompatibleProfiles} is in \nolinkurl{ConsistentSubmodular/Deterministic/Basic/}.
+
+\begin{center}\footnotesize
+\begin{tabular}{@{}ll@{}}
+\hline
+Theorem~\ref{thm:main} & \texttt{WindowCertificates}\\
+Definition~\ref{def:profile}, Theorem~\ref{thm:finite} & \texttt{AtomicProfiles}, \texttt{FiniteCheckpoint}\\
+Proposition~\ref{prop:reduction} & \texttt{CompatibleProfiles}, \texttt{CompletionReduction}, \texttt{ArrayCompletion},\\
+ & \texttt{Triangularization}, \texttt{CompletionScaling}\\
+Lemmas~\ref{lem:facts}, \ref{lem:plateau} & \texttt{AtomicFacts}, \texttt{Plateau}\\
+Definition~\ref{def:carrier}, Lemma~\ref{lem:rows} & \texttt{Envelope}, \texttt{ActualConstructor}, \texttt{ActualCheckpoint}, \texttt{SuffConstructor}\\
+Lemma~\ref{lem:exit} & \texttt{TerminalSuff}, \texttt{TerminalActual}, \texttt{TerminalPairGeometry}\\
+Lemma~\ref{lem:constructors} & \texttt{VertexCheckpoint}, \texttt{ConstructorTests}, \texttt{SuffScalar}\\
+Lemmas~\ref{lem:transfer}--\ref{lem:inherit} & \texttt{Access}, \texttt{ProfileEligibility}, \texttt{RelayProfiles}, \texttt{SelectorRelays}\\
+Definition~\ref{def:relayed}, Lemma~\ref{lem:rollrows} & \texttt{SelectorState}, \texttt{LowRollbackTargets}, \texttt{MiddleRows}, \texttt{RollbackCheckpoint}\\
+Lemmas~\ref{lem:lowroll}, \ref{lem:midroll} & \texttt{LowRollback}, \texttt{MiddleRollback}\\
+Section~\ref{sec:selector} & \texttt{RootInitialization}, \texttt{SelectorLow}, \texttt{SelectorTermination}\\
+\hline
+Facts~\ref{fact:actual}, \ref{fact:exit}, \ref{fact:transfer} & \texttt{ConstructorScalar}, \texttt{TerminalActualScalar}, \texttt{ScalarGeometry}\\
+Facts~\ref{fact:elig33}--\ref{fact:stop} & \texttt{HighAnchor}, \texttt{EligibilityThreshold}, \texttt{BaselineStop}\\
+Facts~\ref{fact:highq}--\ref{fact:fourthirds} & \texttt{RelayError}, \texttt{HighAnchor}, \texttt{FourThirdsBoundary}\\
+Facts~\ref{fact:smallparent}, \ref{fact:upgrade} & \texttt{SmallParent}, \texttt{BaselineUpgrade}\\
+Fact~\ref{fact:low} & \texttt{LowRollbackSources}, \texttt{LowRollbackExclusions}, \texttt{LowRollbackEligible},\\
+ & \texttt{LowRollbackEligibleHigh}, \texttt{LowRollbackBefore}, \texttt{LowRollbackBeforeHigh},\\
+ & \texttt{LowRollbackAfter}\\
+Fact~\ref{fact:mid} & \texttt{MiddleSources}, \texttt{MiddleSigns}, \texttt{MiddleCredits}, \texttt{MiddleParent}\\
+\hline
+\end{tabular}
+\end{center}
+
+\end{document}

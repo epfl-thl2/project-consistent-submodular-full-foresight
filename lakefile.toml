@@ -1,0 +1,26 @@
+name = "consistent_submodular"
+version = "0.1.0"
+defaultTargets = ["ConsistentSubmodular"]
+
+[leanOptions]
+autoImplicit = false
+warningAsError = true
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+rev = "0c154d67103f74be3a0f2c509f72ccbf5be9f2a7"
+
+[[lean_lib]]
+name = "ConsistentSubmodular"
+
+# Lean's comparator (scripts/comparator.py). The challenge states every
+# theorem with `sorry`, so warnings are not errors there.
+[[lean_lib]]
+name = "Challenge"
+srcDir = "comparator"
+leanOptions = { warningAsError = false }
+
+[[lean_lib]]
+name = "Solution"
+srcDir = "comparator"

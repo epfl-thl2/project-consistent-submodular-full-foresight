@@ -1,0 +1,210 @@
+\documentclass[11pt]{article}
+
+\usepackage{amsmath, amssymb}
+\usepackage[margin=1in]{geometry}
+
+\DeclareMathOperator*{\argmax}{argmax}
+\newcommand{\OPT}{\textnormal{OPT}}
+\newcommand{\ALG}{\textnormal{ALG}}
+\newcommand{\eps}{\varepsilon}
+
+\title{Intuition behind the context/prompt that resulted in the first better than $1/2$ deterministic approximation algorithm\thanks{This note is a sketch that shows the initial ideas given to the AI system for the deterministic guarantees. The writing has not been polished, to keep it as it was used.}}
+\author{Eric Balkanski \and Paul D\"utting \and Federico Fusco \and Silvio Lattanzi \and Ashkan Norouzi-Fard \and Ola Svensson \and Morteza Zadimoghaddam}
+\date{}
+
+\begin{document}
+\maketitle
+
+We know there is a way to transition from a solution $S_1$ to $S_2$ such that the value of the interim set always remains at least $\frac{3}{4} \cdot \min\{f(S_1), f(S_2)\}$.
+With this transition loss in mind, we divide the stream into epochs, select a solution in each epoch, and spend a small fraction of each epoch moving from its solution to the one selected for the next epoch. We note that the elements arriving during the current epoch are always added to the output solution.
+
+We divide the stream into epochs of size at most $\eps k$, namely $R_1, R_2, \cdots$, as follows. We first divide the stream into segments of size exactly $\eps^3 k$. Denote these as $W_1, W_2, \cdots$. Epochs are constructed one by one, and each epoch is the union of a consecutive collection of segments.
+Suppose $W_{\ell}$ is the last segment of the previous epoch. The current epoch $i$ will start from segment $W_{\ell+1}$. We keep adding segments to the current epoch until at least one of the following two conditions is met:
+\begin{itemize}
+    \item The addition of the next segment $W_{\ell'}$ does not increase the value of their union by more than a multiplicative factor of $1 + \eps$. In other words, $f(W_{\ell+1, \ell'}) \le (1+\eps) f(W_{\ell+1, \ell'-1})$, where $W_{i,j} = W_i \cup \cdots \cup W_j$. For the first segment, $W_{\ell+1}$, since there are no prior segments in the current epoch yet, we set a different criterion. The stopping condition for the first segment is $f(W_{\ell+1}) \le \eps \cdot \OPT(W_{1,\ell})$, where $\OPT(W_{1, \ell})$ is the optimal solution of the stream prior to segment $\ell+1$. In this case, $\ell'$ would be set to $\ell+1$.
+    \item Exactly $\frac{1}{\eps^2}$ segments (including the next segment $W_{\ell}$) have been added to the epoch; in other words, $\ell' = \frac{1}{\eps^2} + \ell$. Without loss of generality, we assume $\frac{1}{\eps}$ is an integer.
+\end{itemize}
+
+Thus, the current epoch upon termination will be $W_{\ell+1} \cup \cdots \cup W_{\ell'}$.
+If the first condition is met, we know that the optimal solution does not change significantly during the epoch's last segment, which is a desirable property during the transition time.
+Otherwise, we select $\frac{1}{\eps^2}$ segments starting with a value of at least an $\eps$ fraction of the optimal solution so far, and increasing by a multiplicative factor of $1+\eps$. This means the optimal solution at the end of the epoch will be much higher than what we started with. Thus, in a sense, the transition method does not matter, as the elements of the current epoch compensate for any loss and provide a $1-O(\eps)$ approximation on their own. Therefore, we use the last segment of each epoch for the transition in either case.
+
+We define the ground set up to and including epoch $i$ as $N_i = \cup_{j=1}^i R_j$.
+In each epoch $R_i$, we select a feasible set $S_i \subseteq N_i$, and the algorithm's goal is to use part of epoch $i$ to move from $S_i$ to the set selected for the next epoch, $S_{i+1}$.
+To ensure solution feasibility, the final output at any time is the intersection of the current set with the elements that have arrived so far. In particular, at the beginning and end of epoch $i$, the output solutions are $S_i \cap N_{i-1}$ and $S_{i+1} \cap N_i$, respectively.
+
+In the following section, we use simpler, generic notation applied by the algorithm for every epoch. Set $N$ represents the set of elements that arrived prior to the current epoch, where $N = N_{i-1}$ for epoch $i$. Set $R$ represents the items arriving in the current epoch, where $R = R_i$. Sets $A$ and $B$ are the optimal solutions at the beginning and end of the epoch, respectively.
+
+
+\section{Notations and Justifications for Prompt Constraints}
+We are given a set $N$ of already arrived elements and a sequence of elements that will arrive, denoted by $R$.
+
+\begin{align*}
+    A    & = \argmax_{S \subset N, |S| \leq k} f(S)        \\
+    B    & = \argmax_{S \subset N, |S| \leq k} f(S \cup R) \\
+    f(A) & = 1 \ \ \text{Normalizing assumption.}          \\
+    a    & = f(A \cup R)                                   \\
+    b    & = f(B \cup R)                                   \\
+    c    & = f(B)
+\end{align*}
+
+We overload variable $R$ to represent both the set $R$ and its value. In the subsequent prompt, we use it only to denote the value.
+For any $0 \le \lambda \le R$, define $R_{\lambda}$ as the prefix set in the sequence $R$ that has value $\lambda$. We note that this set exists for only a finite number of values for $\lambda$. This works in our favor, as our analysis adds a constraint for every possible value of $\lambda$. Fewer such values result in a less constrained problem.
+Variable $A_{\lambda}$ is a lower bound on the marginal value $f(A \mid R_{\lambda})$; the same applies to $B_{\lambda}$.
+
+The algorithm could choose the robust set by taking a random $p$ fraction of $A$ and a random $1-p$ fraction of $B$. This randomized combination is represented by $\ALG_{\lambda}$ when $R_{\lambda}$ is the set of arrived elements in the current epoch. We can de-randomize by selecting all large marginal value items and then applying concentration bounds to the remaining marginal values. The lower bounds (in the prompt) on $A_{\lambda}$, $B_{\lambda}$, and $\ALG_{\lambda}$ are derived from standard submodularity lemmas.
+
+Finally, we can establish upper bounds on $O_{\lambda}$, which is the optimal value after $R_{\lambda}$ arrives. We consider the possibility of choosing $O_{\lambda} \cap N$ as the initial solution. If it provides an $\alpha$-approximation, we are done. Otherwise, we can achieve a good upper bound on $O_{\lambda}$.
+
+In the following prompt, we have a parameter $\alpha > 0.5$, and the goal is to achieve an $\alpha$-approximation. If the solution to the game is at least $\alpha$, we should have a deterministic $\alpha$-approximation for a large enough $k$. Underlying the random selection of the two sets, we apply concentration bounds, which incurs an $O(\log(k)/k)$ loss.
+
+The upper bounds (for the cases where $\frac{R}{R+1} < \alpha$ or $\frac{R}{R+1} \ge \alpha$) follow from a few simple observations.
+If we choose $O_{\lambda}$ as the solution, the output value at the beginning would be at least $O_{\lambda} - \lambda$. The optimal benchmark is $1$ at the beginning due to normalization.
+Since the aim is to have an $\alpha$-approximation, and there is a potential transition loss of $\frac{3}{4}$, the first operand of the $\max$ expression, namely $\frac{4\alpha}{3} + \lambda$, is implied. The second operand for the case $\frac{R}{R+1} < \alpha$ is similarly derived.
+The other case is a bit more complex. Since $\frac{R}{R+1} \ge \alpha$, we have an $\alpha$-approximation during the last segment no matter what we do. The remaining part to prove concerns the segments prior to the last, which are non-transition segments. Therefore, there is no need to include the $\frac{4}{3}$ term to compensate for the transition loss. The other important observation is that for $\lambda \ge \frac{\alpha}{1-\alpha}$ the same argument holds, so we only need to care about optimal benchmarks below $1 + \lambda^*$ with $\lambda^* =\frac{\alpha}{1-\alpha}$.
+
+Alice represents the worst-case setting that the algorithm must play against. Thus, Alice is in charge of setting the instance-related parameters.
+Bob, on the other hand, represents the algorithm, which observes all the instance parameters and then decides which sets to choose.
+
+
+
+\section{The Prompt}
+We want to find the highest value of parameter $0.5 \le \alpha \le 1$ such that in the following game Bob can ensure that $X$ becomes at least $\alpha$.
+
+Alice and Bob play the following math game. Alice plays first and selects non-negative real numbers $a$, $b$, $c$, and $R$ such that:
+
+$$c \le 1 \le a \le b$$
+$$b-c \le R \le a$$
+Bob, after observing $a$, $b$, $c$ and $R$, chooses a real number $p$ in the range $[0,1]$.
+
+The following expression $X$ is computed afterwards. $X$ is the minimum of three terms $T_1$, $T_2$, and $T_3$ defined as follows:
+
+$$X = \min\{T_1, T_2, T_3\}$$
+
+To define $T_1, T_2, T_3$, we first define auxiliary variables $A_{\lambda}$, $B_{\lambda}$ and $\ALG_{\lambda}$ for every $0 \le \lambda \le R$:
+
+$$A_{\lambda} = \max\{0, 1 - \lambda, a - R\}$$
+$$B_{\lambda} = \max\{0, c - \lambda, b - R\}$$
+We define:
+
+$$\ALG_{\lambda} = \lambda + \max\left\{p^2A_{\lambda} + (1-p)B_{\lambda}, pA_{\lambda} + (1-p)^2B_{\lambda}\right\}$$
+
+Now $T_1, T_2$ are defined as:
+
+
+$$T_1 = \max\left\{\frac{0.75 \ALG_{R}}{b}, \frac{R}{1+R}\right\}$$
+
+$$T_2 = 0.75 \ALG_{0}$$
+
+To define $T_3$, we need to define another auxiliary variable $O_{\lambda}$.
+
+If $\frac{R}{R+1} < \alpha$, we define:
+$$O_{\lambda} = \max\left\{\frac{4 \alpha}{3} + \lambda, \frac{4}{3} \alpha b \right\}$$
+
+Otherwise (case $\frac{R}{R+1} \ge \alpha$), we define:
+$$O_{\lambda} = \max\left\{\frac{4 \alpha}{3} + \lambda, \alpha \min\left\{b, \frac{1}{1-\alpha} \right\} \right\}$$
+
+
+We define $T_3$ as:
+
+$$T_3 = \min_{0 < \lambda < R} \frac{\ALG_{\lambda}}{\min(1+\lambda, b, O_{\lambda})}$$
+
+Alice is trying to play in a way that minimizes $X$, and Bob is trying to maximize it.
+
+\section{Response: first attempt with numerical grid search}
+
+The highest value of parameter $\alpha$ that Bob can ensure is:
+$$\alpha = \frac{\sqrt{57}-3}{8} \approx 0.568729$$
+
+Here is the mathematical justification of why Bob cannot ensure any larger $\alpha$. In this min-max game, Alice wants to minimize $X = \min\{T_1, T_2, T_3\}$, and Bob wants to maximize it. Bob wants to guarantee $X \ge \alpha$.
+
+To show that $\alpha$ cannot exceed $\frac{\sqrt{57}-3}{8}$, we provide a strategy for Alice that limits Bob's payoff regardless of his choice of $p \in [0, 1]$.
+
+Alice can choose $a = b = R = M$ for some large $M \ge 2$, and $c=0$.
+This satisfies all of Alice's constraints:
+$c \le 1 \le a \le b \implies 0 \le 1 \le M \le M$
+$b-c \le R \le a \implies M \le M \le M$
+
+Since $M \ge 2$, when calculating $O_\lambda$, we have $\frac{R}{R+1} = \frac{M}{M+1} \ge \frac{2}{3}$.
+For any target $\alpha$ around $0.57$, we have $\frac{M}{M+1} \ge \alpha$. Thus, $T_3$ uses the second definition of $O_\lambda$:
+$$O_\lambda = \max\left\{\frac{4\alpha}{3} + \lambda, \alpha \min\left\{b, \frac{1}{1-\alpha} \right\} \right\}$$
+
+$T_3$ is defined as the minimum over $0 < \lambda < R$ of a certain expression. Bob's score for $T_3$ will be at most the value of that expression at $\lambda = 1$ (which is valid since $0 < 1 < M$).
+
+Let's evaluate $\ALG_1$ at $\lambda = 1$:
+$$A_1 = \max\{0, 1-1, a-R\} = \max\{0, 0, M-M\} = 0$$
+$$B_1 = \max\{0, c-1, b-R\} = \max\{0, -1, M-M\} = 0$$
+
+Since $A_1 = 0$ and $B_1 = 0$, the value of $\ALG_1$ is independent of Bob's choice of $p$:
+$$\ALG_1 = 1 + \max\{p^2(0) + (1-p)(0), p(0) + (1-p)^2(0)\} = 1$$
+
+Now let's compute the denominator of $T_3$ for $\lambda = 1$:
+$$\min\{1+1, b, O_1\} = \min\{2, M, O_1\}$$
+
+Evaluating $O_1$:
+$$O_1 = \max\left\{\frac{4\alpha}{3} + 1, \alpha \min\left\{M, \frac{1}{1-\alpha} \right\} \right\}$$
+For $\alpha \approx 0.57$, $\frac{1}{1-\alpha} \approx 2.32$. So the second term $\alpha \min\{M, \frac{1}{1-\alpha}\} \le \frac{\alpha}{1-\alpha} \approx 1.32$.
+The first term is $\frac{4\alpha}{3} + 1 \approx 1.76$.
+Thus, the first term strictly dominates, and $O_1 = \frac{4\alpha}{3} + 1$.
+
+Since $O_1 \approx 1.76 < 2 \le M$, the denominator evaluates to exactly $O_1$:
+$$\min\{2, M, O_1\} = \frac{4\alpha}{3} + 1$$
+
+Therefore, evaluated at $\lambda = 1$, the term inside $T_3$ is:
+$$T_3(1) = \frac{1}{\frac{4\alpha}{3} + 1}$$
+
+Because Bob needs $X \ge \alpha$ and $X \le T_3 \le T_3(1)$, we must have:
+$$T_3(1) \ge \alpha \implies \frac{1}{\frac{4\alpha}{3} + 1} \ge \alpha$$
+$$1 \ge \frac{4}{3}\alpha^2 + \alpha$$
+$$4\alpha^2 + 3\alpha - 3 \le 0$$
+
+Solving the quadratic equation $4\alpha^2 + 3\alpha - 3 = 0$:
+$$\alpha = \frac{-3 \pm \sqrt{3^2 - 4(4)(-3)}}{2(4)} = \frac{-3 \pm \sqrt{57}}{8}$$
+
+Since $\alpha$ must be positive, the highest possible value that satisfies the inequality is:
+$$\alpha = \frac{\sqrt{57}-3}{8}$$
+
+Numerical simulations (discretizing $\lambda, p$ and randomized grid searches over all $a,b,c,R$) confirm that Bob's best response $p$ can consistently achieve $X \ge \frac{\sqrt{57}-3}{8}$ for all valid configurations chosen by Alice, meaning this bound is perfectly tight.
+
+\section{Response: second attempt after requesting a formal proof on Bob's strategy}
+\subsection{Introduction}
+We prove that in the described two-player zero-sum game, Bob can always guarantee a payout of $X \ge \alpha = \frac{\sqrt{57}-3}{8} \approx 0.5687$. By the Minimax Theorem for zero-sum games with continuous, convex/concave payoffs over compact domains, we can interchange Bob's maximization and Alice's minimization: $\max_p \min X = \min \max_p X$. We geometrically show that no matter what parameters $a, b, c, R$ Alice chooses, there exists a strategy $p \in [0, 1]$ for Bob that ensures all penalty components ($T_1, T_2, T_3$) remain at least $\alpha$.
+
+\subsection{1. Convexity of Bob's Payoff Inside the Minimax}
+First, we analyze the fundamental structure of the auxiliary variable $\ALG_\lambda$:
+\[ \ALG_\lambda(p) = \lambda + \max\{p^2 A_\lambda + (1-p) B_\lambda, p A_\lambda + (1-p)^2 B_\lambda\} \]
+
+By subtracting and adding cross terms, this algebraically simplifies to a closed form:
+\[ \ALG_\lambda(p) = \lambda + p A_\lambda + (1-p) B_\lambda - p(1-p)\min(A_\lambda, B_\lambda) \]
+
+This simplified form acts as a lower bound for Bob's score inside all $T_1$, $T_2$, and $T_3$ constraints. Notice that $E_1(p) = p^2 A_\lambda + (1-p) B_\lambda$ is a strictly convex function in $p$. Since the maximum of two convex functions is strictly convex, $\ALG_\lambda(p)$ is a strictly convex function natively in $p$.
+
+Thus, Bob's sub-components inside $T_1, T_2, T_3$ are convex with respect to his control variable $p$. This allows him to push $p$ toward $0$ or $1$ to recover bounds without getting trapped in local interior minima.
+
+\subsection{2. Monotonicity of $\ALG_\lambda(p)$ with respect to $\lambda$}
+Alice wants to minimize $T_3(\lambda) = \frac{\ALG_\lambda}{\min(1+\lambda, b, O_\lambda)}$. The denominator is a non-decreasing, $1$-Lipschitz function of $\lambda$.
+
+We evaluate the structural derivative of the numerator $\ALG_\lambda(p)$ with respect to $\lambda$. The variables $A_\lambda = \max(0, 1-\lambda, a-R)$ and $B_\lambda = \max(0, c-\lambda, b-R)$ are piece-wise linear, decreasing with a slope of either $0$ or $-1$. Thus, the inner terms decrease at a rate of at most:
+\[ \max(p^2 + 1 - p, p + (1-p)^2) \]
+
+The minimal derivative of $\ALG_\lambda$ with respect to $\lambda$ is therefore:
+\[ \frac{\partial \ALG_\lambda}{\partial \lambda} \ge 1 - \max(1 - p + p^2, 1 - p + p^2) = p - p^2 = p(1-p) \]
+
+Since $p(1 - p) \ge 0$ for all $p \in [0, 1]$, $\ALG_\lambda$ is always monotonically non-decreasing with respect to $\lambda$. This monotonically increasing numerator strongly counteracts the $1$-Lipschitz increasing denominator, forcing the global minimum of $T_3(\lambda)$ to reliably occur uniformly near the topological boundaries $\lambda \to 0$ or $\lambda = 1$.
+
+\subsection{3. The Tight Global Bound}
+Because $\ALG_\lambda$ does not dip below its boundary values, Bob only needs to balance his defense against three specific collapse points that Alice can target:
+\begin{itemize}
+    \item \textbf{Collapse $T_2$}: Alice attempts to drive $T_2 = 0.75 \ALG_0 < \alpha$. Bob defends by picking a $p$ balancing $a$ and $b$. If Alice forces $a=1, b=1$, Bob pushes $p \to 1.0$, which yields $\ALG_0 = 1$ and $T_2 = 0.75 > \alpha$.
+    \item \textbf{Collapse $T_1$}: Alice attempts to drive $T_1 < \alpha$. Here Alice needs $\frac{R}{R+1} < \alpha$. Bob counteracts this by utilizing $p$ to bolster $\ALG_R$.
+    \item \textbf{Collapse $T_3$}: Alice stretches $R$ to arbitrarily large extremes ($R \ge \frac{\alpha}{1-\alpha}$) and aligns $a = b = R$, eliminating $A_\lambda$ and $B_\lambda$ for $\lambda \ge 1$.
+\end{itemize}
+
+It is only in the third collapse (where Alice sets $a = b = R \ge 2, c = 0$) that Bob's defense using $p$ is neutralized. At $\lambda = 1$, we have $A_1 = B_1 = 0$, which strips away Bob's $p$ modifiers. In this terminal bottleneck, Bob's payout defaults to exactly $\ALG_1 = 1$, and $T_3(1)$ drops to its absolute nadir:
+\[ T_3(1) = \frac{1}{\frac{4\alpha}{3} + 1} \]
+
+Because this defines the sole topological bottleneck where Bob's dynamic defense variables zero out, his minimum possible payout across all optimal strategies rests precisely at this $T_3(1)$ boundary constraint. Enforcing $T_3(1) \ge \alpha$ implies:
+\[ \frac{1}{\frac{4\alpha}{3} + 1} \ge \alpha \implies 4\alpha^2 + 3\alpha - 3 \le 0 \]
+which exactly achieves the root boundary $\alpha = \frac{\sqrt{57}-3}{8}$.
+
+\end{document}

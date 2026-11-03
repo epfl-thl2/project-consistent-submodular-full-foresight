@@ -1,0 +1,37 @@
+{
+  "challenge_module": "Challenge",
+  "solution_module": "Solution",
+  "theorem_names": [
+    "ConsistentSubmodular.randomizedTight",
+    "ConsistentSubmodular.deterministicTight",
+    "ConsistentSubmodular.randomizedUpper",
+    "ConsistentSubmodular.randomizedUpperLimit",
+    "ConsistentSubmodular.randomizedLower",
+    "ConsistentSubmodular.additionRobustReduction",
+    "ConsistentSubmodular.intervalSelectionReduction",
+    "ConsistentSubmodular.consecutiveIntervalReduction",
+    "ConsistentSubmodular.consecutiveIntervalGap",
+    "ConsistentSubmodular.psiRoot",
+    "ConsistentSubmodular.minimax",
+    "ConsistentSubmodular.deterministicUpper",
+    "ConsistentSubmodular.deterministicUpperLimit",
+    "ConsistentSubmodular.deterministicLower",
+    "ConsistentSubmodular.certificateReduction",
+    "ConsistentSubmodular.sqrtTwoCertificates",
+    "ConsistentSubmodular.threeQuarterCertificates",
+    "ConsistentSubmodular.gridStreamCrossing",
+    "ConsistentSubmodular.windowBounds",
+    "ConsistentSubmodular.mixtureComparisons",
+    "ConsistentSubmodular.twoTypeInterpolation",
+    "ConsistentSubmodular.prefixSuffixTradeoff",
+    "ConsistentSubmodular.prefixBound",
+    "ConsistentSubmodular.suffixBound",
+    "ConsistentSubmodular.concentration"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ],
+  "enable_nanoda": false
+}
